@@ -14,11 +14,13 @@ terraform {
     region       = "ap-southeast-1"
     encrypt      = true
     use_lockfile = true
+    profile      = "go-web-deploy"
   }
 }
 
 provider "aws" {
-  region = var.aws_region
+  region  = var.aws_region
+  profile = "go-web-deploy"
 
   default_tags {
     tags = local.common_tags
