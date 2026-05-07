@@ -1,0 +1,30 @@
+# Copy this file to terraform.tfvars and fill in the values.
+# Never commit terraform.tfvars — it is listed in .gitignore.
+
+aws_region  = "ap-southeast-1"
+app_name    = "go-web"
+environment = "prod"
+
+# GitHub repository in "owner/repo" format
+github_repo = "YOUR_GITHUB_ORG/go_web"
+
+# ── Networking ────────────────────────────────────────────────────────────────
+# Use the same VPC as the RDS instance.
+vpc_id             = "vpc-xxxxxxxxxxxxxxxxx"
+public_subnet_ids  = ["subnet-xxxxxxxxxxxxxxxxx", "subnet-yyyyyyyyyyyyyyyyy"]
+private_subnet_ids = ["subnet-zzzzzzzzzzzzzzzzz", "subnet-aaaaaaaaaaaaaaaaaa"]
+
+# ── RDS ───────────────────────────────────────────────────────────────────────
+db_host       = "database-1.ct8ym8caacv7.ap-southeast-1.rds.amazonaws.com"
+db_user       = "postgres"
+db_name       = "postgres"
+db_secret_arn = "arn:aws:secretsmanager:ap-southeast-1:183047559773:secret:rds!db-df55855c-b5a7-4570-a808-16d23ab471e9-njINjO"
+
+# Security group currently attached to the RDS instance
+rds_security_group_id = "sg-xxxxxxxxxxxxxxxxx"
+
+# ── ECS ───────────────────────────────────────────────────────────────────────
+app_port      = 8080
+task_cpu      = 256   # 0.25 vCPU
+task_memory   = 512   # MiB
+desired_count = 1

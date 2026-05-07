@@ -1,0 +1,15 @@
+bin/
+dist/
+.env
+*.exe
+*.test
+coverage.out
+
+# Terraform — never commit state or real variable values
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/terraform.tfvars
+**/override.tf
+**/override.tf.json

@@ -1,0 +1,177 @@
+basePath: /
+definitions:
+  handler.errorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  handler.healthResponse:
+    properties:
+      database:
+        type: string
+      status:
+        type: string
+      time:
+        type: string
+    type: object
+  handler.userCreateRequest:
+    properties:
+      age:
+        type: integer
+      name:
+        type: string
+    type: object
+  handler.usersListFilters:
+    properties:
+      max_age:
+        type: integer
+      min_age:
+        type: integer
+      name:
+        type: string
+    type: object
+  handler.usersListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.User'
+        type: array
+      filters:
+        $ref: '#/definitions/handler.usersListFilters'
+      has_more:
+        type: boolean
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  model.User:
+    properties:
+      Id:
+        type: integer
+      Name:
+        type: string
+      age:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: Go Web demo API with PostgreSQL and GORM Gen.
+  title: go_web API
+  version: "1.0"
+paths:
+  /api/users:
+    get:
+      description: Returns a paginated user list, optionally filtered by name.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: page_size
+        type: integer
+      - description: Filter by partial user name
+        in: query
+        name: name
+        type: string
+      - description: Filter by minimum age
+        in: query
+        minimum: 0
+        name: min_age
+        type: integer
+      - description: Filter by maximum age
+        in: query
+        minimum: 0
+        name: max_age
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.usersListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      summary: List users
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user with the provided name and age.
+      parameters:
+      - description: User to create
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/handler.userCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      summary: Create user
+      tags:
+      - users
+  /api/users/batch_create:
+    post:
+      description: Starts a background process to create 50 mock users.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Batch create users
+      tags:
+      - users
+  /healthz:
+    get:
+      description: Returns application and database health status.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.healthResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handler.healthResponse'
+      summary: Health check
+      tags:
+      - system
+schemes:
+- http
+swagger: "2.0"

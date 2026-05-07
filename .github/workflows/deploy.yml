@@ -1,0 +1,84 @@
+name: Deploy to ECS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # allow manual trigger
+
+# Required for OIDC token issuance
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION:      ap-southeast-1
+  ECR_REPOSITORY:  go-web-prod          # matches module.ecr.repository_name output
+  ECS_CLUSTER:     go-web-prod          # matches module.ecs.cluster_name output
+  ECS_SERVICE:     go-web-prod          # matches module.ecs.service_name output
+  CONTAINER_NAME:  go-web-prod          # must match the container name in the task definition
+  APP_PORT:        "8080"
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    environment: production            # optional: protect main branch deploys
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. AWS authentication (OIDC — no long-lived credentials) ─────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region:     ${{ env.AWS_REGION }}
+
+      # ── 3. Login to Amazon ECR ───────────────────────────────────────────────
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ── 4. Build & push Docker image ─────────────────────────────────────────
+      - name: Build, tag, and push image to ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG:    ${{ github.sha }}
+        run: |
+          docker build \
+            --cache-from "$ECR_REGISTRY/$ECR_REPOSITORY:latest" \
+            --tag "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
+            --tag "$ECR_REGISTRY/$ECR_REPOSITORY:latest" \
+            .
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+      # ── 5. Fetch current task definition from ECS ────────────────────────────
+      - name: Download current ECS task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "$ECS_SERVICE" \
+            --query taskDefinition \
+            > task-definition.json
+
+      # ── 6. Inject new image into task definition ─────────────────────────────
+      - name: Render updated ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition:  task-definition.json
+          container-name:   ${{ env.CONTAINER_NAME }}
+          image:            ${{ steps.build-image.outputs.image }}
+
+      # ── 7. Register & deploy new task definition ─────────────────────────────
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition:          ${{ steps.task-def.outputs.task-definition }}
+          service:                  ${{ env.ECS_SERVICE }}
+          cluster:                  ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true   # fail the workflow if deployment fails
