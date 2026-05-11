@@ -48,6 +48,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import loginBg from '@/asset/bg.png'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
@@ -87,17 +88,32 @@ async function handleLogin() {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-left: 20%;
+}
+.login-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: v-bind("'url(' + loginBg + ')'");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
 }
 .login-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 40px;
-  width: 380px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 16px;
+  padding: 56px 60px;
+  width: 480px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
 }
 .login-header {
   text-align: center;

@@ -1,12 +1,9 @@
 ## ── .NET ─────────────────────────────────────────────────────────────────────
 bin/
 obj/
-dist/
 *.user
 *.suo
-.vs/
 *.swp
-*.DS_Store
 
 # Dotnet publish output
 publish/
@@ -18,27 +15,65 @@ coverage.json
 coverage.cobertura.xml
 *.coveragexml
 
-# User secrets
+# .NET User Secrets
 secrets.json
 appsettings.*.Local.json
 
-# Environment files
-.env
-.env.*
-!.env.example
+# IDE
+.vs/
+.idea/
+*.sln.DotSettings.user
 
 # EF Core bundle
 efbundle
 
-## ── Terraform ─────────────────────────────────────────────────────────────────
+## ── Node.js / Vue / Vite ─────────────────────────────────────────────────────
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tsbuildinfo
+
+## ── Environment & Secrets ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+# 保留示例文件和非敏感的固定环境配置
+!.env.example
+!.env.production
+!.env.development
+
+## ── Terraform ────────────────────────────────────────────────────────────────
 **/.terraform/
 **/.terraform.lock.hcl
 **/terraform.tfstate
 **/terraform.tfstate.backup
+# tfvars 通常含敏感值，用 tfvars.example 代替
 **/terraform.tfvars
 **/override.tf
 **/override.tf.json
+**/*.tfplan
+**/crash.log
+**/crash.*.log
 
-## ── AWS ──────────────────────────────────────────────────────────────────────
+## ── Docker ───────────────────────────────────────────────────────────────────
+.dockerignore.local
+
+## ── AWS / Certificates ───────────────────────────────────────────────────────
 *.pem
 !global-bundle.pem
+*.p12
+*.pfx
+*.key
+*.crt
+*.cer
+*.csr
+
+## ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
