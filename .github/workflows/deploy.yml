@@ -26,6 +26,7 @@ env:
   CONTAINER_NAME:  exam-prod
   APP_PORT:        "8080"
   DOTNET_VERSION:  "8.0.x"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   changes:
