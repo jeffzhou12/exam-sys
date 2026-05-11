@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "app_name" {
   description = "Application name (used as a resource name prefix)"
   type        = string
-  default     = "go-web"
+  default     = "exam"
 }
 
 variable "environment" {
@@ -19,6 +19,12 @@ variable "environment" {
 variable "github_repo" {
   description = "GitHub repository in owner/repo format"
   type        = string
+}
+
+variable "domain_name" {
+  description = "Your domain name (e.g. example.com). Leave empty to use HTTP only."
+  type        = string
+  default     = ""
 }
 
 # ── Networking ────────────────────────────────────────────────────────────────
@@ -92,6 +98,51 @@ variable "task_memory" {
 
 variable "desired_count" {
   description = "Number of running ECS tasks"
+  type        = number
+  default     = 1
+}
+
+variable "ecr_force_delete" {
+  description = "Allow deleting non-empty ECR repositories during name replacement"
+  type        = bool
+  default     = false
+}
+
+variable "alb_deletion_protection" {
+  description = "Enable ALB deletion protection; keep false during rename/replacement operations"
+  type        = bool
+  default     = false
+}
+
+# ── AI 服务 ───────────────────────────────────────────────────────────────────
+variable "ai_api_key" {
+  description = "OpenAI / Azure OpenAI API Key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "ai_base_url" {
+  description = "AI API base URL"
+  type        = string
+  default     = "https://api.openai.com/v1"
+}
+
+variable "ai_chat_model" {
+  description = "Chat model name"
+  type        = string
+  default     = "gpt-4o"
+}
+
+# ── Redis (ElastiCache) ───────────────────────────────────────────────────────
+variable "redis_node_type" {
+  description = "ElastiCache node type"
+  type        = string
+  default     = "cache.t3.micro"
+}
+
+variable "redis_num_clusters" {
+  description = "Number of Redis cache nodes (1 = single, 2 = primary + replica)"
   type        = number
   default     = 1
 }

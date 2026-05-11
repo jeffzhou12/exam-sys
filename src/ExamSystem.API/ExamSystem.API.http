@@ -1,0 +1,64 @@
+@ExamSystem.API_HostAddress = http://localhost:5146
+@tenantId = 00000000-0000-0000-0000-000000000001
+
+GET {{ExamSystem.API_HostAddress}}/health
+Accept: application/json
+
+###
+
+# Create tenant if you do not want to use the seeded demo tenant.
+POST {{ExamSystem.API_HostAddress}}/api/tenants
+Content-Type: application/json
+
+{
+	"name": "Redis Demo Tenant",
+	"contactEmail": "redis-demo@example.com",
+	"aiCallQuota": 1000
+}
+
+###
+
+# Create a question. This invalidates the tenant question-list cache.
+POST {{ExamSystem.API_HostAddress}}/api/questions
+X-Tenant-ID: {{tenantId}}
+Content-Type: application/json
+
+{
+	"type": 1,
+	"content": "What is Redis primarily used for?",
+	"options": {
+		"items": [
+			"Object storage",
+			"In-memory caching",
+			"Video streaming",
+			"DNS hosting"
+		]
+	},
+	"correctAnswer": "In-memory caching",
+	"explanation": "Redis is commonly used as an in-memory cache and data structure store.",
+	"knowledgePoint": "redis-basics",
+	"difficulty": 1
+}
+
+###
+
+# First read: expected to hit PostgreSQL and populate Redis.
+GET {{ExamSystem.API_HostAddress}}/api/questions?page=1&pageSize=20&knowledgePoint=redis-basics
+X-Tenant-ID: {{tenantId}}
+Accept: application/json
+
+###
+
+# Second read: same query, expected to return from Redis cache.
+GET {{ExamSystem.API_HostAddress}}/api/questions?page=1&pageSize=20&knowledgePoint=redis-basics
+X-Tenant-ID: {{tenantId}}
+Accept: application/json
+
+###
+
+# Third read with a different filter: expected to generate a different cache key.
+GET {{ExamSystem.API_HostAddress}}/api/questions?page=1&pageSize=20&knowledgePoint=redis-basics&difficulty=1
+X-Tenant-ID: {{tenantId}}
+Accept: application/json
+
+###

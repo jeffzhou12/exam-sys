@@ -3,45 +3,64 @@ name: Deploy to ECS
 on:
   push:
     branches: [main]
-  workflow_dispatch: # allow manual trigger
+  workflow_dispatch:
 
-# Required for OIDC token issuance
 permissions:
   id-token: write
   contents: read
 
 env:
   AWS_REGION:      ap-southeast-1
-  ECR_REPOSITORY:  go-web-prod          # matches module.ecr.repository_name output
-  ECS_CLUSTER:     go-web-prod          # matches module.ecs.cluster_name output
-  ECS_SERVICE:     go-web-prod          # matches module.ecs.service_name output
-  CONTAINER_NAME:  go-web-prod          # must match the container name in the task definition
+  ECR_REPOSITORY:  exam-prod
+  ECS_CLUSTER:     exam-prod
+  ECS_SERVICE:     exam-prod
+  CONTAINER_NAME:  exam-prod
   APP_PORT:        "8080"
+  DOTNET_VERSION:  "8.0.x"
 
 jobs:
-  deploy:
-    name: Build & Deploy
+  build-and-test:
+    name: Build & Test
     runs-on: ubuntu-latest
-    environment: production            # optional: protect main branch deploys
 
     steps:
-      # ── 1. Checkout ──────────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 2. AWS authentication (OIDC — no long-lived credentials) ─────────────
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore src/ExamSystem.API/ExamSystem.API.csproj
+
+      - name: Build
+        run: dotnet build src/ExamSystem.API/ExamSystem.API.csproj --no-restore -c Release
+
+  deploy:
+    name: Build Image & Deploy
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── AWS 认证（OIDC，无长期凭证）────────────────────────────────────────
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region:     ${{ env.AWS_REGION }}
 
-      # ── 3. Login to Amazon ECR ───────────────────────────────────────────────
+      # ── 登录 ECR ─────────────────────────────────────────────────────────────
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # ── 4. Build & push Docker image ─────────────────────────────────────────
+      # ── 构建并推送 Docker 镜像 ───────────────────────────────────────────────
       - name: Build, tag, and push image to ECR
         id: build-image
         env:
@@ -57,7 +76,21 @@ jobs:
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
-      # ── 5. Fetch current task definition from ECS ────────────────────────────
+      # ── 运行 EF Core 数据库迁移（通过 ECS Run Task）──────────────────────────
+      - name: Run EF Core migrations
+        env:
+          IMAGE: ${{ steps.build-image.outputs.image }}
+        run: |
+          aws ecs run-task \
+            --cluster "$ECS_CLUSTER" \
+            --task-definition "$ECS_SERVICE" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ secrets.ECS_SUBNET_ID }}],securityGroups=[${{ secrets.ECS_SG_ID }}],assignPublicIp=ENABLED}" \
+            --overrides "{\"containerOverrides\":[{\"name\":\"$CONTAINER_NAME\",\"command\":[\"dotnet\",\"ef\",\"database\",\"update\",\"--project\",\"ExamSystem.Infrastructure\",\"--startup-project\",\"ExamSystem.API\"],\"image\":\"$IMAGE\"}]}" \
+            --query 'tasks[0].taskArn' \
+            --output text || true
+
+      # ── 获取当前任务定义 ─────────────────────────────────────────────────────
       - name: Download current ECS task definition
         run: |
           aws ecs describe-task-definition \
@@ -65,7 +98,7 @@ jobs:
             --query taskDefinition \
             > task-definition.json
 
-      # ── 6. Inject new image into task definition ─────────────────────────────
+      # ── 注入新镜像 ───────────────────────────────────────────────────────────
       - name: Render updated ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -74,11 +107,12 @@ jobs:
           container-name:   ${{ env.CONTAINER_NAME }}
           image:            ${{ steps.build-image.outputs.image }}
 
-      # ── 7. Register & deploy new task definition ─────────────────────────────
+      # ── 部署到 ECS ───────────────────────────────────────────────────────────
       - name: Deploy to Amazon ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
-          task-definition:          ${{ steps.task-def.outputs.task-definition }}
-          service:                  ${{ env.ECS_SERVICE }}
-          cluster:                  ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true   # fail the workflow if deployment fails
+          task-definition:            ${{ steps.task-def.outputs.task-definition }}
+          service:                    ${{ env.ECS_SERVICE }}
+          cluster:                    ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+

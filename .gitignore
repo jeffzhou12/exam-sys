@@ -1,11 +1,36 @@
+## ── .NET ─────────────────────────────────────────────────────────────────────
 bin/
+obj/
 dist/
-.env
-*.exe
-*.test
-coverage.out
+*.user
+*.suo
+.vs/
+*.swp
+*.DS_Store
 
-# Terraform — never commit state or real variable values
+# Dotnet publish output
+publish/
+
+# Test results
+TestResults/
+coverage.xml
+coverage.json
+coverage.cobertura.xml
+*.coveragexml
+
+# User secrets
+secrets.json
+appsettings.*.Local.json
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# EF Core bundle
+efbundle
+
+## ── Terraform ─────────────────────────────────────────────────────────────────
 **/.terraform/
 **/.terraform.lock.hcl
 **/terraform.tfstate
@@ -13,3 +38,7 @@ coverage.out
 **/terraform.tfvars
 **/override.tf
 **/override.tf.json
+
+## ── AWS ──────────────────────────────────────────────────────────────────────
+*.pem
+!global-bundle.pem

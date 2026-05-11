@@ -95,6 +95,33 @@ variable "assign_public_ip" {
   default     = false
 }
 
+# ── AI 服务 ───────────────────────────────────────────────────────────────────
+variable "ai_api_key" {
+  description = "OpenAI / Azure OpenAI API Key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "ai_base_url" {
+  description = "AI API base URL (OpenAI compatible)"
+  type        = string
+  default     = "https://api.openai.com/v1"
+}
+
+variable "ai_chat_model" {
+  description = "Chat completion model name"
+  type        = string
+  default     = "gpt-4o"
+}
+
+# ── Redis ─────────────────────────────────────────────────────────────────────
+variable "redis_connection" {
+  description = "Redis connection string (host:port)"
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Resource tags"
   type        = map(string)

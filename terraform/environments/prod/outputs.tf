@@ -1,6 +1,6 @@
 output "alb_dns_name" {
   description = "Access the application at this URL"
-  value       = "http://${module.alb.alb_dns_name}"
+  value       = var.domain_name != "" ? "https://${var.domain_name}" : "http://${module.alb.alb_dns_name}"
 }
 
 output "ecr_repository_url" {
@@ -26,4 +26,14 @@ output "github_actions_role_arn" {
 output "ecs_tasks_security_group_id" {
   description = "ECS tasks security group ID (already added to RDS SG via Terraform)"
   value       = module.ecs.ecs_tasks_security_group_id
+}
+
+output "redis_primary_endpoint" {
+  description = "ElastiCache Redis primary endpoint"
+  value       = module.elasticache.primary_endpoint
+}
+
+output "redis_connection_string" {
+  description = "Redis connection string injected into ECS tasks as REDIS_CONNECTION"
+  value       = module.elasticache.connection_string
 }
