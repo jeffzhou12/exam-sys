@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExamSystem.Application.ExamPapers.Queries;
 
-public record GetExamPaperDetailQuery(Guid TenantId, Guid ExamPaperId);
+public record GetExamPaperDetailQuery(Guid? TenantId, Guid ExamPaperId);
 
 public record ExamPaperDetailDto(
     Guid Id,
@@ -38,7 +38,8 @@ public class GetExamPaperDetailQueryHandler(IApplicationDbContext context)
             .AsNoTracking()
             .Include(e => e.ExamQuestions)
                 .ThenInclude(eq => eq.Question)
-            .FirstOrDefaultAsync(e => e.Id == query.ExamPaperId && e.TenantId == query.TenantId, cancellationToken);
+            .FirstOrDefaultAsync(e => e.Id == query.ExamPaperId &&
+                (!query.TenantId.HasValue || e.TenantId == query.TenantId.Value), cancellationToken);
 
         if (paper is null)
             return null;

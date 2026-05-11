@@ -27,7 +27,8 @@ public enum GradingStatus
 
 public enum UserRole
 {
-    Admin = 0,    // 管理员
-    Teacher = 1,  // 教师
-    Student = 2   // 学生
+    SuperAdmin = -1, // 超级管理员（无租户，可管理全部）
+    Admin = 0,       // 普通管理员（归属某租户）
+    Teacher = 1,     // 教师
+    Student = 2      // 学生
 }

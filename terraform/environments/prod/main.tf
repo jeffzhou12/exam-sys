@@ -47,10 +47,12 @@ module "ecr" {
 module "iam" {
   source = "../../modules/iam"
 
-  name_prefix        = local.name
-  db_secret_arn      = var.db_secret_arn
-  ecr_repository_arn = module.ecr.repository_arn
-  github_repo        = var.github_repo
+  name_prefix         = local.name
+  db_secret_arn       = var.db_secret_arn
+  ecr_repository_arn  = module.ecr.repository_arn
+  github_repo         = var.github_repo
+  enable_frontend_deploy = true
+  frontend_bucket_arn    = module.cloudfront.s3_bucket_arn
 }
 
 # ── ALB ───────────────────────────────────────────────────────────────────────
@@ -130,4 +132,15 @@ resource "aws_security_group_rule" "rds_from_ecs" {
   protocol                 = "tcp"
   security_group_id        = var.rds_security_group_id
   source_security_group_id = module.ecs.ecs_tasks_security_group_id
+}
+
+# ── CloudFront + S3 (前端静态资源) ────────────────────────────────────────────
+module "cloudfront" {
+  source = "../../modules/cloudfront"
+
+  name         = local.name
+  bucket_name  = "${local.name}-frontend"
+  alb_dns_name = module.alb.alb_dns_name
+  force_destroy = var.ecr_force_delete # 开发环境允许销毁，生产建议设 false
+  tags         = local.common_tags
 }

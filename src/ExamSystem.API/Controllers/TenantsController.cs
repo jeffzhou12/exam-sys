@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ExamSystem.API.Controllers;
 
-[Authorize(Roles = Roles.Admin)]
+[Authorize(Roles = Roles.SuperAdmin)]
 [ApiController]
 [Route("api/tenants")]
 [Produces("application/json")]

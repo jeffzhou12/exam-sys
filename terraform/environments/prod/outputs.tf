@@ -37,3 +37,18 @@ output "redis_connection_string" {
   description = "Redis connection string injected into ECS tasks as REDIS_CONNECTION"
   value       = module.elasticache.connection_string
 }
+
+output "frontend_url" {
+  description = "前端管理后台访问地址（CloudFront）"
+  value       = module.cloudfront.distribution_domain
+}
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront Distribution ID（CI/CD 缓存失效用）"
+  value       = module.cloudfront.distribution_id
+}
+
+output "frontend_s3_bucket" {
+  description = "前端静态文件 S3 Bucket 名称（CI/CD 上传用）"
+  value       = module.cloudfront.s3_bucket_name
+}

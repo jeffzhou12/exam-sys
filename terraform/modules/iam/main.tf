@@ -158,3 +158,42 @@ resource "aws_iam_role_policy_attachment" "github_actions_deploy" {
   role       = aws_iam_role.github_actions.name
   policy_arn = aws_iam_policy.github_actions_deploy.arn
 }
+
+# ── S3 + CloudFront 权限（前端部署，可选）────────────────────────────────────
+resource "aws_iam_policy" "github_actions_frontend" {
+  count       = var.enable_frontend_deploy ? 1 : 0
+  name        = "${var.name_prefix}-github-actions-frontend"
+  description = "Allow GitHub Actions to deploy frontend to S3 and invalidate CloudFront"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "S3FrontendDeploy"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
+          "s3:ListBucket",
+        ]
+        Resource = [
+          var.frontend_bucket_arn,
+          "${var.frontend_bucket_arn}/*",
+        ]
+      },
+      {
+        Sid      = "CloudFrontInvalidate"
+        Effect   = "Allow"
+        Action   = ["cloudfront:CreateInvalidation"]
+        Resource = ["*"]
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_frontend" {
+  count      = var.enable_frontend_deploy ? 1 : 0
+  role       = aws_iam_role.github_actions.name
+  policy_arn = aws_iam_policy.github_actions_frontend[0].arn
+}

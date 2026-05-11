@@ -3,13 +3,14 @@ using ExamSystem.Application.Users.Queries;
 using ExamSystem.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace ExamSystem.API.Controllers;
 
 [ApiController]
 [Route("api/users")]
 [Produces("application/json")]
-[Authorize(Roles = Roles.Admin)]
+[Authorize(Roles = Roles.SuperAdminOrAdmin)]
 public class UsersController(
     GetUsersQueryHandler getUsersHandler,
     GetUserByIdQueryHandler getUserByIdHandler,
@@ -18,7 +19,7 @@ public class UsersController(
     ToggleUserStatusCommandHandler toggleStatusHandler,
     AdminResetPasswordCommandHandler resetPasswordHandler) : ControllerBase
 {
-    /// <summary>获取用户列表（Admin 可查所有租户，附带租户名称）</summary>
+    /// <summary>获取用户列表（SuperAdmin 可查所有租户，Admin 只能查自己租户）</summary>
     [HttpGet]
     [ProducesResponseType(200)]
     public async Task<IActionResult> GetUsers(
@@ -30,6 +31,14 @@ public class UsersController(
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        // 普通管理员强制限定为自己的租户，防止越权查询
+        var userRole = User.FindFirstValue(ClaimTypes.Role);
+        if (string.Equals(userRole, Roles.Admin, StringComparison.OrdinalIgnoreCase))
+        {
+            var tenantClaim = User.FindFirstValue("tenant_id");
+            tenantId = Guid.TryParse(tenantClaim, out var tid) ? tid : null;
+        }
+
         var result = await getUsersHandler.Handle(
             new GetUsersQuery(tenantId, page, pageSize, role, isActive, search),
             cancellationToken);

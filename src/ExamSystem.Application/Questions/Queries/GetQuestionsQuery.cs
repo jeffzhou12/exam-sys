@@ -7,7 +7,7 @@ using System.Globalization;
 namespace ExamSystem.Application.Questions.Queries;
 
 public record GetQuestionsQuery(
-    Guid TenantId,
+    Guid? TenantId,
     int Page = 1,
     int PageSize = 20,
     QuestionType? Type = null,
@@ -34,9 +34,9 @@ public class GetQuestionsQueryHandler(
         if (cached is not null)
             return cached;
 
-        var q = context.Questions
-            .AsNoTracking()
-            .Where(x => x.TenantId == query.TenantId && x.IsActive);
+        var q = context.Questions.AsNoTracking().Where(x => x.IsActive);
+        if (query.TenantId.HasValue)
+            q = q.Where(x => x.TenantId == query.TenantId.Value);
 
         if (query.Type.HasValue)
             q = q.Where(x => x.Type == query.Type.Value);

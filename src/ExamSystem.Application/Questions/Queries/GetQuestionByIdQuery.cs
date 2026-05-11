@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace ExamSystem.Application.Questions.Queries;
 
-public record GetQuestionByIdQuery(Guid TenantId, Guid QuestionId);
+public record GetQuestionByIdQuery(Guid? TenantId, Guid QuestionId);
 
 public record QuestionDetailDto(
     Guid Id,
@@ -28,7 +28,8 @@ public class GetQuestionByIdQueryHandler(IApplicationDbContext context)
     {
         return await context.Questions
             .AsNoTracking()
-            .Where(q => q.Id == query.QuestionId && q.TenantId == query.TenantId)
+            .Where(q => q.Id == query.QuestionId &&
+                (!query.TenantId.HasValue || q.TenantId == query.TenantId.Value))
             .Select(q => new QuestionDetailDto(
                 q.Id, q.Type, q.Content, q.Options, q.CorrectAnswer,
                 q.Explanation, q.KnowledgePoint, q.Difficulty,

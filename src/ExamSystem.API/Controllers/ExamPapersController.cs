@@ -59,9 +59,10 @@ public class ExamPapersController(
         CancellationToken cancellationToken = default)
     {
         var tenantId = tenantService.GetCurrentTenantId();
+        if (tenantId is null) return BadRequest(new { error = "请先通过租户切换器选择一个租户。" });
         var id = await createHandler.Handle(
             new CreateExamPaperCommand(
-                tenantId, request.Title, request.Description,
+                tenantId.Value, request.Title, request.Description,
                 request.TotalScore, request.DurationMinutes,
                 request.StartTime, request.EndTime,
                 request.AntiCheatingEnabled,
@@ -82,9 +83,10 @@ public class ExamPapersController(
         CancellationToken cancellationToken = default)
     {
         var tenantId = tenantService.GetCurrentTenantId();
+        if (tenantId is null) return BadRequest(new { error = "请先通过租户切换器选择一个租户。" });
         await updateHandler.Handle(
             new UpdateExamPaperCommand(
-                tenantId, id, request.Title, request.Description,
+                tenantId.Value, id, request.Title, request.Description,
                 request.TotalScore, request.DurationMinutes,
                 request.StartTime, request.EndTime,
                 request.AntiCheatingEnabled,
@@ -102,7 +104,8 @@ public class ExamPapersController(
     public async Task<IActionResult> PublishExamPaper(Guid id, CancellationToken cancellationToken = default)
     {
         var tenantId = tenantService.GetCurrentTenantId();
-        await publishHandler.Handle(new PublishExamPaperCommand(tenantId, id), cancellationToken);
+        if (tenantId is null) return BadRequest(new { error = "请先通过租户切换器选择一个租户。" });
+        await publishHandler.Handle(new PublishExamPaperCommand(tenantId.Value, id), cancellationToken);
         return NoContent();
     }
 
@@ -115,7 +118,8 @@ public class ExamPapersController(
     public async Task<IActionResult> CancelExamPaper(Guid id, CancellationToken cancellationToken = default)
     {
         var tenantId = tenantService.GetCurrentTenantId();
-        await cancelHandler.Handle(new CancelExamPaperCommand(tenantId, id), cancellationToken);
+        if (tenantId is null) return BadRequest(new { error = "请先通过租户切换器选择一个租户。" });
+        await cancelHandler.Handle(new CancelExamPaperCommand(tenantId.Value, id), cancellationToken);
         return NoContent();
     }
 

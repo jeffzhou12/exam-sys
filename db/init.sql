@@ -10,7 +10,7 @@
 -- 启用必要扩展
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 若要使用向量相似度检测（题目去重），需安装 pgvector 扩展
--- CREATE EXTENSION IF NOT EXISTS "vector";
+CREATE EXTENSION IF NOT EXISTS "vector";
 
 -- =============================================================================
 -- 租户表
@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS questions (
     difficulty       SMALLINT     NOT NULL DEFAULT 1 CHECK (difficulty BETWEEN 1 AND 5),
     is_ai_generated  BOOLEAN      NOT NULL DEFAULT FALSE,
     is_active        BOOLEAN      NOT NULL DEFAULT TRUE,
+    embedding        real[],                -- 向量嵌入，用于题目去重检测（float[]，对应 C# float[]）
     created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );

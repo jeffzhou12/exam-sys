@@ -61,7 +61,8 @@ public class QuestionsController(
         var tenantId = tenantService.GetCurrentTenantId();
         var id = await createQuestionHandler.Handle(
             new CreateQuestionCommand(
-                tenantId, request.Type, request.Content,
+                tenantId ?? throw new InvalidOperationException("请先选择租户。"),
+                request.Type, request.Content,
                 request.Options, request.CorrectAnswer,
                 request.Explanation, request.KnowledgePoint, request.Difficulty),
             cancellationToken);
@@ -81,7 +82,8 @@ public class QuestionsController(
     {
         var tenantId = tenantService.GetCurrentTenantId();
         await updateQuestionHandler.Handle(
-            new UpdateQuestionCommand(tenantId, id, request.Type, request.Content,
+            new UpdateQuestionCommand(tenantId ?? throw new InvalidOperationException("请先选择租户。"),
+                id, request.Type, request.Content,
                 request.Options, request.CorrectAnswer, request.Explanation,
                 request.KnowledgePoint, request.Difficulty),
             cancellationToken);
@@ -96,7 +98,9 @@ public class QuestionsController(
     public async Task<IActionResult> DeleteQuestion(Guid id, CancellationToken cancellationToken = default)
     {
         var tenantId = tenantService.GetCurrentTenantId();
-        await deleteQuestionHandler.Handle(new DeleteQuestionCommand(tenantId, id), cancellationToken);
+        await deleteQuestionHandler.Handle(
+            new DeleteQuestionCommand(tenantId ?? throw new InvalidOperationException("请先选择租户。"), id),
+            cancellationToken);
         return NoContent();
     }
 
@@ -110,7 +114,9 @@ public class QuestionsController(
     {
         var tenantId = tenantService.GetCurrentTenantId();
         var count = await generateQuestionsHandler.Handle(
-            new GenerateQuestionsWithAiCommand(tenantId, request.KnowledgePoint, request.QuestionType, request.Count),
+            new GenerateQuestionsWithAiCommand(
+                tenantId ?? throw new InvalidOperationException("请先选择租户。"),
+                request.KnowledgePoint, request.QuestionType, request.Count),
             cancellationToken);
 
         return Ok(new { generated = count });

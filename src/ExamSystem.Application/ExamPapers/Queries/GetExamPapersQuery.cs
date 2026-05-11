@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ExamSystem.Application.ExamPapers.Queries;
 
 public record GetExamPapersQuery(
-    Guid TenantId,
+    Guid? TenantId,
     int Page = 1,
     int PageSize = 10,
     ExamStatus? Status = null);
@@ -29,9 +29,9 @@ public class GetExamPapersQueryHandler(IApplicationDbContext context)
     public async Task<PaginatedResult<ExamPaperDto>> Handle(
         GetExamPapersQuery query, CancellationToken cancellationToken = default)
     {
-        var q = context.ExamPapers
-            .AsNoTracking()
-            .Where(e => e.TenantId == query.TenantId);
+        var q = context.ExamPapers.AsNoTracking();
+        if (query.TenantId.HasValue)
+            q = q.Where(e => e.TenantId == query.TenantId.Value);
 
         if (query.Status.HasValue)
             q = q.Where(e => e.Status == query.Status.Value);

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ExamSystem.Application.Common.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,6 +19,15 @@ public class TenantMiddleware(RequestDelegate next)
         var path = context.Request.Path.Value ?? string.Empty;
 
         if (PublicPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+        {
+            await next(context);
+            return;
+        }
+
+        // 超级管理员无租户归属，跳过租户验证
+        var userRole = context.User?.FindFirstValue(ClaimTypes.Role)
+                       ?? context.User?.FindFirstValue("role");
+        if (string.Equals(userRole, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase))
         {
             await next(context);
             return;

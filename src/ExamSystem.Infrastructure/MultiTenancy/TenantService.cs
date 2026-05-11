@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using ExamSystem.Application.Common.Interfaces;
+using ExamSystem.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using ExamSystem.Infrastructure.Data;
@@ -9,19 +11,28 @@ public class TenantService(IHttpContextAccessor httpContextAccessor, Application
 {
     private const string TenantIdHeader = "X-Tenant-ID";
 
-    public Guid GetCurrentTenantId()
+    public Guid? GetCurrentTenantId()
     {
-        var headerValue = httpContextAccessor.HttpContext?.Request.Headers[TenantIdHeader].FirstOrDefault();
+        var ctx = httpContextAccessor.HttpContext;
+        var headerValue = ctx?.Request.Headers[TenantIdHeader].FirstOrDefault();
 
-        if (string.IsNullOrWhiteSpace(headerValue) || !Guid.TryParse(headerValue, out var tenantId))
-            throw new UnauthorizedAccessException("Missing or invalid X-Tenant-ID header.");
+        // 如果请求头中有有效的租户 ID，直接使用（所有角色均适用）
+        if (!string.IsNullOrWhiteSpace(headerValue) && Guid.TryParse(headerValue, out var tenantId))
+            return tenantId;
 
-        return tenantId;
+        // 超级管理员没有选择租户时，返回 null（表示不限制租户）
+        var role = ctx?.User?.FindFirstValue(ClaimTypes.Role)
+                   ?? ctx?.User?.FindFirstValue("role");
+        if (string.Equals(role, nameof(UserRole.SuperAdmin), StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        throw new UnauthorizedAccessException("Missing or invalid X-Tenant-ID header.");
     }
 
     public string GetCurrentSchemaName()
     {
-        var tenantId = GetCurrentTenantId();
+        var tenantId = GetCurrentTenantId()
+            ?? throw new UnauthorizedAccessException("SuperAdmin must select a tenant before this operation.");
         // 同步查询 schema 名称（通常已缓存）
         var tenant = dbContext.Tenants.AsNoTracking()
             .FirstOrDefault(t => t.Id == tenantId && t.IsActive)
