@@ -98,18 +98,6 @@ jobs:
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
-      - name: Run EF Core migrations
-        env:
-          IMAGE: ${{ steps.build-image.outputs.image }}
-        run: |
-          aws ecs run-task \
-            --cluster "$ECS_CLUSTER" \
-            --task-definition "$ECS_SERVICE" \
-            --launch-type FARGATE \
-            --network-configuration "awsvpcConfiguration={subnets=[${{ secrets.ECS_SUBNET_ID }}],securityGroups=[${{ secrets.ECS_SG_ID }}],assignPublicIp=ENABLED}" \
-            --overrides "{\"containerOverrides\":[{\"name\":\"$CONTAINER_NAME\",\"command\":[\"dotnet\",\"ef\",\"database\",\"update\",\"--project\",\"ExamSystem.Infrastructure\",\"--startup-project\",\"ExamSystem.API\"],\"image\":\"$IMAGE\"}]}" \
-            --query 'tasks[0].taskArn' \
-            --output text || true
       - name: Download current ECS task definition
         run: |
           aws ecs describe-task-definition \
