@@ -104,12 +104,17 @@ resource "aws_ecs_task_definition" "this" {
       # .NET / ASP.NET Core
       { name = "ASPNETCORE_URLS",        value = "http://+:${var.app_port}" },
       { name = "ASPNETCORE_ENVIRONMENT", value = "Production" },
-      # AI 服务
-      { name = "AI_API_KEY",             value = var.ai_api_key },
-      { name = "AI_BASE_URL",            value = var.ai_base_url },
-      { name = "AI__CHATMODEL",          value = var.ai_chat_model },
+      # AI 服务 - 主 Provider（DeepSeek 官方）
+      { name = "AI__PRIMARY__APIKEY",      value = var.ai_primary_api_key },
+      { name = "AI__PRIMARY__BASEURL",     value = var.ai_primary_base_url },
+      { name = "AI__PRIMARY__CHATMODEL",   value = var.ai_primary_chat_model },
+      # AI 服务 - 备 Provider（硅基流动 DeepSeek）
+      { name = "AI__FALLBACK__APIKEY",     value = var.ai_fallback_api_key },
+      { name = "AI__FALLBACK__BASEURL",    value = var.ai_fallback_base_url },
+      { name = "AI__FALLBACK__CHATMODEL",  value = var.ai_fallback_chat_model },
       # Redis
       { name = "REDIS_CONNECTION",       value = var.redis_connection },
+      { name = "JWT__SECRETKEY",          value = var.jwt_secret_key },
     ]
 
     logConfiguration = {

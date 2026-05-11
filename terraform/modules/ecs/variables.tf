@@ -95,24 +95,43 @@ variable "assign_public_ip" {
   default     = false
 }
 
-# ── AI 服务 ───────────────────────────────────────────────────────────────────
-variable "ai_api_key" {
-  description = "OpenAI / Azure OpenAI API Key"
+# ── AI 服务（主 Provider: DeepSeek 官方，备 Provider: 硅基流动）────────────────
+variable "ai_primary_api_key" {
+  description = "DeepSeek 官方 API Key (platform.deepseek.com)"
   type        = string
   sensitive   = true
   default     = ""
 }
 
-variable "ai_base_url" {
-  description = "AI API base URL (OpenAI compatible)"
+variable "ai_primary_base_url" {
+  description = "DeepSeek 官方 API Base URL"
   type        = string
-  default     = "https://api.openai.com/v1"
+  default     = "https://api.deepseek.com/v1"
 }
 
-variable "ai_chat_model" {
-  description = "Chat completion model name"
+variable "ai_primary_chat_model" {
+  description = "DeepSeek 对话模型名称"
   type        = string
-  default     = "gpt-4o"
+  default     = "deepseek-chat"
+}
+
+variable "ai_fallback_api_key" {
+  description = "硅基流动备用 API Key (cloud.siliconflow.cn)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "ai_fallback_base_url" {
+  description = "硅基流动 API Base URL"
+  type        = string
+  default     = "https://api.siliconflow.cn/v1"
+}
+
+variable "ai_fallback_chat_model" {
+  description = "硅基流动 DeepSeek 模型名称"
+  type        = string
+  default     = "deepseek-ai/DeepSeek-V3"
 }
 
 # ── Redis ─────────────────────────────────────────────────────────────────────
@@ -120,6 +139,13 @@ variable "redis_connection" {
   description = "Redis connection string (host:port)"
   type        = string
   default     = ""
+}
+
+# ── JWT ───────────────────────────────────────────────────────────────────────
+variable "jwt_secret_key" {
+  description = "JWT signing secret key (min 32 chars)"
+  type        = string
+  sensitive   = true
 }
 
 variable "tags" {

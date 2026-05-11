@@ -6,6 +6,7 @@ namespace ExamSystem.Application.Common.Interfaces;
 public interface IApplicationDbContext
 {
     DbSet<Tenant> Tenants { get; }
+    DbSet<User> Users { get; }
     DbSet<Question> Questions { get; }
     DbSet<ExamPaper> ExamPapers { get; }
     DbSet<ExamQuestion> ExamQuestions { get; }

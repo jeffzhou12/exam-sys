@@ -24,3 +24,10 @@ public enum GradingStatus
     AiGraded = 2,    // AI 评分完成
     ManualGraded = 3 // 人工评分完成
 }
+
+public enum UserRole
+{
+    Admin = 0,    // 管理员
+    Teacher = 1,  // 教师
+    Student = 2   // 学生
+}

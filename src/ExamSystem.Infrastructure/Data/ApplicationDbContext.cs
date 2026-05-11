@@ -8,6 +8,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     : DbContext(options), IApplicationDbContext
 {
     public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<User> Users => Set<User>();
     public DbSet<Question> Questions => Set<Question>();
     public DbSet<ExamPaper> ExamPapers => Set<ExamPaper>();
     public DbSet<ExamQuestion> ExamQuestions => Set<ExamQuestion>();

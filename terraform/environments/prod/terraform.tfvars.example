@@ -29,9 +29,14 @@ rds_security_group_id = "sg-xxxxxxxxxxxxxxxxx"
 # redis_num_clusters = 1   # 生产建议设为 2（主 + 副本）
 
 # ── AI 服务 ───────────────────────────────────────────────────────────────────
-# ai_api_key   = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-# ai_base_url  = "https://api.openai.com/v1"
-# ai_chat_model = "gpt-4o"
+# 主力：DeepSeek 官方 (https://platform.deepseek.com → API Keys)
+# ai_primary_api_key    = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# ai_primary_base_url   = "https://api.deepseek.com/v1"
+# ai_primary_chat_model = "deepseek-chat"
+# 备用：硅基流动 (https://cloud.siliconflow.cn → API密钥)
+# ai_fallback_api_key    = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# ai_fallback_base_url   = "https://api.siliconflow.cn/v1"
+# ai_fallback_chat_model = "deepseek-ai/DeepSeek-V3"
 
 # ── ECS ───────────────────────────────────────────────────────────────────────
 app_port      = 8080

@@ -94,10 +94,14 @@ module "ecs" {
   db_name       = var.db_name
   db_secret_arn = var.db_secret_arn
 
-  ai_api_key    = var.ai_api_key
-  ai_base_url   = var.ai_base_url
-  ai_chat_model = var.ai_chat_model
+  ai_primary_api_key     = var.ai_primary_api_key
+  ai_primary_base_url    = var.ai_primary_base_url
+  ai_primary_chat_model  = var.ai_primary_chat_model
+  ai_fallback_api_key    = var.ai_fallback_api_key
+  ai_fallback_base_url   = var.ai_fallback_base_url
+  ai_fallback_chat_model = var.ai_fallback_chat_model
 
+  jwt_secret_key   = var.jwt_secret_key
   redis_connection = module.elasticache.connection_string
 }
 

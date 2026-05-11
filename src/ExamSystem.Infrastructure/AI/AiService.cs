@@ -1,43 +1,69 @@
 using ExamSystem.Application.Common.Interfaces;
+using Microsoft.Extensions.Logging;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 
 namespace ExamSystem.Infrastructure.AI;
 
 /// <summary>
-/// 通用 AI 服务，对接 OpenAI / Azure OpenAI 兼容接口。
-/// 生产环境可替换为 Semantic Kernel 实现。
+/// AI 服务实现，主力使用 DeepSeek 官方 API，备用硅基流动 DeepSeek。
+/// 当主力 Provider 请求失败时自动 Fallback 到备用 Provider。
 /// </summary>
-public class AiService(HttpClient httpClient, AiServiceOptions options) : IAiService
+public class AiService(
+    IHttpClientFactory httpClientFactory,
+    AiServiceOptions options,
+    ILogger<AiService> logger) : IAiService
 {
+    private static readonly JsonSerializerOptions JsonOpts = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     public async Task<string> GenerateQuestionsAsync(
-        string knowledgePoint, int count, string questionType, CancellationToken cancellationToken = default)
+        string knowledgePoint, int count, string questionType,
+        CancellationToken cancellationToken = default)
     {
         var prompt =
-            $"你是一位专业的题目出题专家。请根据以下知识点生成 {count} 道{questionType}题目。\n" +
+            $"你是一位专业的考试出题专家。请根据以下知识点生成 {count} 道{questionType}题目。\n" +
             $"知识点：{knowledgePoint}\n\n" +
             "请以严格的 JSON 数组格式返回，每个元素包含：\n" +
-            "- content: 题目内容\n- correctAnswer: 正确答案\n- explanation: 解析（可选）\n\n" +
-            "只返回 JSON，不要有其他内容。";
+            "- content: 题目内容（字符串）\n" +
+            "- correctAnswer: 正确答案（字符串）\n" +
+            "- explanation: 解析说明（字符串，可选）\n\n" +
+            "只返回 JSON 数组，不要包含任何 Markdown 代码块或额外说明。";
 
-        return await CallChatApiAsync(prompt, cancellationToken);
+        return await CallWithFallbackAsync(
+            provider => CallChatApiAsync(provider, prompt, cancellationToken),
+            cancellationToken);
     }
 
     public async Task<AiGradingResult> GradeShortAnswerAsync(
-        string referenceAnswer, string studentAnswer, string scoringCriteria, int maxScore, CancellationToken cancellationToken = default)
+        string referenceAnswer, string studentAnswer,
+        string scoringCriteria, int maxScore,
+        CancellationToken cancellationToken = default)
     {
         var prompt =
-            "请根据以下评分标准，对考生的简答题作答进行评分。\n\n" +
-            $"参考答案：{referenceAnswer}\n" +
-            $"考生答案：{studentAnswer}\n" +
-            $"评分标准：{scoringCriteria}\n" +
-            $"满分：{maxScore}\n\n" +
-            "请以严格的 JSON 格式返回：\n" +
-            "{\"score\": <整数分数>, \"feedback\": \"<评语>\"}\n\n" +
-            "只返回 JSON，不要有其他内容。";
+            "请根据以下评分标准，对考生的简答题作答进行客观评分。\n\n" +
+            $"【参考答案】\n{referenceAnswer}\n\n" +
+            $"【考生答案】\n{studentAnswer}\n\n" +
+            $"【评分标准】\n{scoringCriteria}\n\n" +
+            $"【满分】{maxScore} 分\n\n" +
+            "请以严格的 JSON 格式返回（不包含 Markdown 代码块）：\n" +
+            "{\"score\": <整数>, \"feedback\": \"<简洁评语，不超过200字>\"}";
 
-        var raw = await CallChatApiAsync(prompt, cancellationToken);
+        var raw = await CallWithFallbackAsync(
+            provider => CallChatApiAsync(provider, prompt, cancellationToken),
+            cancellationToken);
+
+        // 去除可能的 markdown 代码块标记
+        raw = raw.Trim();
+        if (raw.StartsWith("```"))
+        {
+            var start = raw.IndexOf('\n') + 1;
+            var end = raw.LastIndexOf("```");
+            raw = end > start ? raw[start..end].Trim() : raw;
+        }
 
         using var doc = JsonDocument.Parse(raw);
         var root = doc.RootElement;
@@ -47,48 +73,111 @@ public class AiService(HttpClient httpClient, AiServiceOptions options) : IAiSer
         return new AiGradingResult(score, feedback, 0, 0);
     }
 
-    public async Task<float[]> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default)
+    public async Task<float[]> GenerateEmbeddingAsync(
+        string text, CancellationToken cancellationToken = default)
     {
-        var request = new { model = options.EmbeddingModel, input = text };
-        var response = await httpClient.PostAsJsonAsync($"{options.BaseUrl}/embeddings", request, cancellationToken);
+        // Embedding 仅走主 Provider（DeepSeek 目前不提供 Embedding，走备用硅基流动）
+        var provider = options.FallbackProvider ?? options.PrimaryProvider;
+
+        using var client = CreateHttpClient(provider);
+        var request = new { model = provider.EmbeddingModel, input = text };
+        var response = await client.PostAsJsonAsync("embeddings", request, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        using var doc = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken: cancellationToken);
-        var embedding = doc!.RootElement
+        using var doc = await response.Content.ReadFromJsonAsync<JsonDocument>(
+            cancellationToken: cancellationToken);
+
+        return doc!.RootElement
             .GetProperty("data")[0]
             .GetProperty("embedding")
             .EnumerateArray()
             .Select(e => e.GetSingle())
             .ToArray();
-
-        return embedding;
     }
 
-    private async Task<string> CallChatApiAsync(string userMessage, CancellationToken cancellationToken)
+    // ── 内部核心方法 ──────────────────────────────────────────────────────────
+
+    private async Task<T> CallWithFallbackAsync<T>(
+        Func<AiProviderConfig, Task<T>> action,
+        CancellationToken cancellationToken)
     {
+        try
+        {
+            logger.LogDebug("AI 请求 → 主 Provider: {Provider}", options.PrimaryProvider.Name);
+            return await action(options.PrimaryProvider);
+        }
+        catch (Exception ex) when (options.FallbackProvider is not null)
+        {
+            logger.LogWarning(ex,
+                "主 Provider ({Primary}) 请求失败，切换到备用 Provider: {Fallback}",
+                options.PrimaryProvider.Name, options.FallbackProvider.Name);
+            return await action(options.FallbackProvider);
+        }
+    }
+
+    private async Task<string> CallChatApiAsync(
+        AiProviderConfig provider, string userMessage, CancellationToken cancellationToken)
+    {
+        using var client = CreateHttpClient(provider);
+
         var requestBody = new
         {
-            model = options.ChatModel,
-            messages = new[] { new { role = "user", content = userMessage } },
-            temperature = 0.7
+            model = provider.ChatModel,
+            messages = new[]
+            {
+                new { role = "system", content = "你是一个专业的教育辅助AI，请用中文回复。" },
+                new { role = "user",   content = userMessage }
+            },
+            temperature = 0.7,
+            max_tokens = 4096
         };
 
-        var response = await httpClient.PostAsJsonAsync($"{options.BaseUrl}/chat/completions", requestBody, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        var response = await client.PostAsJsonAsync("chat/completions", requestBody, JsonOpts, cancellationToken);
 
-        using var doc = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken: cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new HttpRequestException(
+                $"AI API [{provider.Name}] 返回错误 {(int)response.StatusCode}: {errorBody}");
+        }
+
+        using var doc = await response.Content.ReadFromJsonAsync<JsonDocument>(
+            cancellationToken: cancellationToken);
+
         return doc!.RootElement
             .GetProperty("choices")[0]
             .GetProperty("message")
             .GetProperty("content")
             .GetString() ?? string.Empty;
     }
+
+    private HttpClient CreateHttpClient(AiProviderConfig provider)
+    {
+        var client = httpClientFactory.CreateClient("AiService");
+        client.BaseAddress = new Uri(provider.BaseUrl.TrimEnd('/') + "/");
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", provider.ApiKey);
+        client.Timeout = TimeSpan.FromSeconds(90);
+        return client;
+    }
 }
 
-public class AiServiceOptions
+// ── 配置模型 ──────────────────────────────────────────────────────────────────
+
+/// <summary>单个 AI Provider 配置</summary>
+public class AiProviderConfig
 {
+    public string Name { get; set; } = string.Empty;
     public string BaseUrl { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
-    public string ChatModel { get; set; } = "gpt-4o";
-    public string EmbeddingModel { get; set; } = "text-embedding-3-small";
+    public string ChatModel { get; set; } = "deepseek-chat";
+    public string EmbeddingModel { get; set; } = "BAAI/bge-m3";
 }
+
+/// <summary>AI 服务整体配置（主 + 备）</summary>
+public class AiServiceOptions
+{
+    public AiProviderConfig PrimaryProvider { get; set; } = new();
+    public AiProviderConfig? FallbackProvider { get; set; }
+}
+

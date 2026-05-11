@@ -1,4 +1,5 @@
 using ExamSystem.Domain.Entities;
+using ExamSystem.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -75,5 +76,28 @@ public class AiAuditLogConfiguration : IEntityTypeConfiguration<AiAuditLog>
         builder.Property(a => a.Operation).HasMaxLength(100).IsRequired();
         builder.Property(a => a.ModelName).HasMaxLength(100).IsRequired();
         builder.HasIndex(a => new { a.TenantId, a.CreatedAt });
+    }
+}
+
+public class UserConfiguration : IEntityTypeConfiguration<User>
+{
+    public void Configure(EntityTypeBuilder<User> builder)
+    {
+        builder.ToTable("users");
+        builder.HasKey(u => u.Id);
+        builder.Property(u => u.Username).HasMaxLength(100).IsRequired();
+        builder.Property(u => u.PasswordHash).HasMaxLength(512).IsRequired();
+        builder.Property(u => u.Email).HasMaxLength(320);
+        builder.Property(u => u.Role)
+            .HasConversion(
+                v => v.ToString(),
+                v => Enum.Parse<UserRole>(v))
+            .HasMaxLength(50);
+        // 同一租户内用户名唯一（系统管理员 tenant_id 为 null，通过数据库约束保证）
+        builder.HasIndex(u => new { u.TenantId, u.Username }).IsUnique();
+        builder.HasOne(u => u.Tenant)
+            .WithMany()
+            .HasForeignKey(u => u.TenantId)
+            .IsRequired(false);
     }
 }
