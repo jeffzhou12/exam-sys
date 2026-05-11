@@ -1,4 +1,5 @@
 using ExamSystem.Application.Common.Interfaces;
+using ExamSystem.Application.Common.Models;
 using ExamSystem.Application.Questions.Commands;
 using ExamSystem.Application.Questions.Queries;
 using ExamSystem.Domain.Enums;
@@ -23,7 +24,7 @@ public class QuestionsController(
 {
     /// <summary>获取题目列表（分页，支持多维过滤）</summary>
     [HttpGet]
-    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(PaginatedResult<QuestionDto>), 200)]
     public async Task<IActionResult> GetQuestions(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
@@ -41,7 +42,7 @@ public class QuestionsController(
 
     /// <summary>获取题目详情（含完整选项和答案）</summary>
     [HttpGet("{id:guid}")]
-    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(QuestionDetailDto), 200)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetQuestion(Guid id, CancellationToken cancellationToken = default)
     {

@@ -1,4 +1,5 @@
 using ExamSystem.Application.Common.Interfaces;
+using ExamSystem.Application.Common.Models;
 using ExamSystem.Application.ExamPapers.Commands;
 using ExamSystem.Application.ExamPapers.Queries;
 using ExamSystem.Domain.Enums;
@@ -24,7 +25,7 @@ public class ExamPapersController(
     /// <summary>获取试卷列表（分页）</summary>
     [HttpGet]
     [Authorize(Roles = Roles.All)]
-    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(PaginatedResult<ExamPaperDto>), 200)]
     public async Task<IActionResult> GetExamPapers(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
@@ -40,7 +41,7 @@ public class ExamPapersController(
     /// <summary>获取试卷详情（含题目列表）</summary>
     [HttpGet("{id:guid}")]
     [Authorize(Roles = Roles.All)]
-    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(ExamPaperDetailDto), 200)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetExamPaper(Guid id, CancellationToken cancellationToken = default)
     {

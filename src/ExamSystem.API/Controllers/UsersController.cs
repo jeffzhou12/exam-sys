@@ -1,3 +1,4 @@
+using ExamSystem.Application.Common.Models;
 using ExamSystem.Application.Users.Commands;
 using ExamSystem.Application.Users.Queries;
 using ExamSystem.Domain.Enums;
@@ -21,7 +22,7 @@ public class UsersController(
 {
     /// <summary>获取用户列表（SuperAdmin 可查所有租户，Admin 只能查自己租户）</summary>
     [HttpGet]
-    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(PaginatedResult<UserDto>), 200)]
     public async Task<IActionResult> GetUsers(
         [FromQuery] Guid? tenantId = null,
         [FromQuery] UserRole? role = null,
@@ -47,7 +48,7 @@ public class UsersController(
 
     /// <summary>获取用户详情</summary>
     [HttpGet("{id:guid}")]
-    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(UserDto), 200)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetUser(Guid id, CancellationToken cancellationToken = default)
     {

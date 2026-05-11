@@ -12,7 +12,7 @@ public class TenantMiddleware(RequestDelegate next)
     private const string TenantIdHeader = "X-Tenant-ID";
 
     // 跳过租户验证的路径前缀
-    private static readonly string[] PublicPaths = ["/health", "/swagger", "/api/auth", "/api/tenants", "/api/users"];
+    private static readonly string[] PublicPaths = ["/healthz", "/health", "/swagger", "/api/auth", "/api/tenants", "/api/users"];
 
     public async Task InvokeAsync(HttpContext context, ITenantService tenantService)
     {

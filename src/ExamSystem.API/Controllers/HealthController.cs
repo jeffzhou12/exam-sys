@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ExamSystem.API.Controllers;
 
 [ApiController]
-[Route("health")]
+[Route("healthz")]
 public class HealthController : ControllerBase
 {
     [HttpGet]

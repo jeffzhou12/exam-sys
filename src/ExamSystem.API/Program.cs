@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using ExamSystem.API;
 using ExamSystem.Application;
 using ExamSystem.Application.Common.Models;
@@ -7,6 +8,7 @@ using ExamSystem.API.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Any;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,6 +62,21 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
     c.OperationFilter<TenantIdOperationFilter>();
+
+    // JsonDocument 在 Swagger 中显示为自由 JSON 对象，避免生成 additionalProp1/2/3
+    c.MapType<JsonDocument>(() => new OpenApiSchema
+    {
+        Type = "object",
+        Description = "任意 JSON 对象",
+        Example = new OpenApiObject()
+    });
+    c.MapType<JsonDocument?>(() => new OpenApiSchema
+    {
+        Type = "object",
+        Nullable = true,
+        Description = "任意 JSON 对象（可选）",
+        Example = new OpenApiObject()
+    });
 });
 
 // ── JWT 认证 ──────────────────────────────────────────────────────────────────
