@@ -67,14 +67,8 @@ builder.Services.AddSwaggerGen(c =>
     c.MapType<JsonDocument>(() => new OpenApiSchema
     {
         Type = "object",
-        Description = "任意 JSON 对象",
-        Example = new OpenApiObject()
-    });
-    c.MapType<JsonDocument?>(() => new OpenApiSchema
-    {
-        Type = "object",
         Nullable = true,
-        Description = "任意 JSON 对象（可选）",
+        Description = "任意 JSON 对象",
         Example = new OpenApiObject()
     });
 });
