@@ -270,17 +270,17 @@ terraform apply
 
 ### 主要输出
 
-| 输出 | 说明 |
-|------|----|
-| `frontend_url` | Admin 管理后台 CloudFront 地址 |
-| `frontend_s3_bucket` | Admin S3 存储桶名称 |
-| `cloudfront_distribution_id` | Admin CloudFront Distribution ID |
-| `portal_url` | Portal 考生前台 CloudFront 地址 |
-| `portal_s3_bucket` | Portal S3 存储桶名称 |
-| `portal_cloudfront_distribution_id` | Portal CloudFront Distribution ID |
-| `alb_dns_name` | ALB DNS（后端 API） |
-| `ecr_repository_url` | ECR 镜像仓库地址 |
-| `github_actions_role_arn` | GitHub Actions OIDC Role ARN（设为 `AWS_DEPLOY_ROLE_ARN`） |
+| 输出 | 当前值 |
+|------|--------|
+| `frontend_url` | https://d165uf1arxthuu.cloudfront.net |
+| `frontend_s3_bucket` | `exam-prod-frontend` |
+| `cloudfront_distribution_id` | `E2ZM87T9HC3XX0` |
+| `portal_url` | https://d2a95y8zxdxfqo.cloudfront.net |
+| `portal_s3_bucket` | `exam-prod-portal` |
+| `portal_cloudfront_distribution_id` | `ETKCW0WLJ5CFJ` |
+| `alb_dns_name` | `http://exam-prod-1791453538.ap-southeast-1.elb.amazonaws.com` |
+| `ecr_repository_url` | `183047559773.dkr.ecr.ap-southeast-1.amazonaws.com/exam-prod` |
+| `github_actions_role_arn` | `arn:aws:iam::183047559773:role/exam-prod-github-actions` |
 
 ---
 
