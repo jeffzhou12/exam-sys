@@ -25,7 +25,13 @@ variable "enable_frontend_deploy" {
 }
 
 variable "frontend_bucket_arn" {
-  description = "ARN of the S3 bucket for frontend static files"
+  description = "ARN of the S3 bucket for admin frontend static files"
+  type        = string
+  default     = ""
+}
+
+variable "portal_bucket_arn" {
+  description = "ARN of the S3 bucket for portal (student) frontend static files"
   type        = string
   default     = ""
 }

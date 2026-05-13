@@ -70,7 +70,7 @@ public class UsersController(
         return CreatedAtAction(nameof(GetUser), new { id }, new { id });
     }
 
-    /// <summary>更新用户信息（邮箱、角色）</summary>
+    /// <summary>更新用户信息（邮箱、角色，SuperAdmin 可修改所属租户）</summary>
     [HttpPut("{id:guid}")]
     [ProducesResponseType(204)]
     [ProducesResponseType(400)]
@@ -80,7 +80,12 @@ public class UsersController(
         [FromBody] UpdateUserRequest request,
         CancellationToken cancellationToken = default)
     {
-        await updateUserHandler.Handle(new UpdateUserCommand(id, request.Email, request.Role), cancellationToken);
+        // 仅 SuperAdmin 允许修改所属租户
+        var userRole = User.FindFirstValue(ClaimTypes.Role);
+        var tenantId = string.Equals(userRole, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase)
+            ? request.TenantId
+            : null;
+        await updateUserHandler.Handle(new UpdateUserCommand(id, request.Email, request.Role, tenantId), cancellationToken);
         return NoContent();
     }
 
@@ -113,5 +118,5 @@ public class UsersController(
 }
 
 public record CreateUserRequest(Guid? TenantId, string Username, string Password, string? Email, UserRole Role);
-public record UpdateUserRequest(string? Email, UserRole Role);
+public record UpdateUserRequest(string? Email, UserRole Role, Guid? TenantId = null);
 public record AdminResetPasswordRequest(string NewPassword);

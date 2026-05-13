@@ -71,6 +71,10 @@
               type="info"
               @click="$router.push(`/exam-papers/${row.id}/results`)"
             >成绩</el-button>
+            <el-button
+              size="small"
+              @click="openPreview(row)"
+            >预览</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -84,6 +88,45 @@
         @change="loadData"
       />
     </el-card>
+
+    <!-- 试卷预览对话框 -->
+    <el-dialog v-model="previewVisible" title="试卷预览" width="760px" top="5vh">
+    <div v-if="previewLoading" style="text-align:center;padding:40px">
+      <el-icon class="is-loading" size="32"><Loading /></el-icon>
+    </div>
+    <template v-else-if="previewData">
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="标题">{{ previewData.title }}</el-descriptions-item>
+        <el-descriptions-item label="总分">{{ previewData.totalScore }} 分</el-descriptions-item>
+        <el-descriptions-item label="考试时长">{{ previewData.durationMinutes }} 分钟</el-descriptions-item>
+        <el-descriptions-item label="题目数">{{ previewData.questions?.length ?? 0 }} 题</el-descriptions-item>
+        <el-descriptions-item label="开始时间">{{ formatDate(previewData.startTime) }}</el-descriptions-item>
+        <el-descriptions-item label="结束时间">{{ formatDate(previewData.endTime) }}</el-descriptions-item>
+        <el-descriptions-item v-if="previewData.description" label="描述" :span="2">{{ previewData.description }}</el-descriptions-item>
+      </el-descriptions>
+
+      <el-divider>题目列表</el-divider>
+      <div
+        v-for="(q, idx) in previewData.questions"
+        :key="q.questionId"
+        class="preview-question"
+      >
+        <div class="preview-q-header">
+          <span class="preview-q-index">{{ idx + 1 }}.</span>
+          <el-tag size="small" style="margin: 0 8px">{{ typeLabel(q.type) }}</el-tag>
+          <span class="preview-q-score">{{ q.score }} 分</span>
+        </div>
+        <div class="preview-q-content">{{ q.content }}</div>
+        <div v-if="q.options && q.options.length" class="preview-q-options">
+          <div v-for="(opt, oi) in q.options" :key="oi" class="preview-q-option">
+            <span class="option-label">{{ String.fromCharCode(65 + oi) }}.</span>
+            {{ opt }}
+          </div>
+        </div>
+        <div v-if="q.answer" class="preview-q-answer">参考答案：{{ q.answer }}</div>
+      </div>
+    </template>
+  </el-dialog>
   </div>
 </template>
 
@@ -92,7 +135,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { examPapersApi } from '@/api/examPapers'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Loading } from '@element-plus/icons-vue'
 
 const auth = useAuthStore()
 const loading = ref(false)
@@ -143,6 +186,24 @@ function formatDate(val) {
   return new Date(val).toLocaleString('zh-CN')
 }
 
+// 预览
+const previewVisible = ref(false)
+const previewLoading = ref(false)
+const previewData = ref(null)
+
+const typeLabel = (t) => ({ 1: '单选题', 2: '多选题', 3: '判断题', 4: '简答题' }[t] ?? t)
+
+async function openPreview(row) {
+  previewVisible.value = true
+  previewLoading.value = true
+  previewData.value = null
+  try {
+    previewData.value = await examPapersApi.getById(row.id)
+  } finally {
+    previewLoading.value = false
+  }
+}
+
 onMounted(loadData)
 </script>
 
@@ -159,4 +220,23 @@ onMounted(loadData)
 .filter-card :deep(.el-card__body) { padding: 16px 16px 0; }
 .table-card :deep(.el-card__body) { padding: 16px; }
 .pagination { margin-top: 16px; justify-content: flex-end; }
+
+.preview-question {
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+.preview-q-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.preview-q-index { font-weight: 600; font-size: 15px; }
+.preview-q-score { color: #f56c6c; font-size: 13px; margin-left: auto; }
+.preview-q-content { font-size: 14px; color: #303133; line-height: 1.6; margin-bottom: 8px; }
+.preview-q-options { display: flex; flex-direction: column; gap: 4px; }
+.preview-q-option { font-size: 13px; color: #606266; }
+.option-label { font-weight: 600; margin-right: 4px; }
+.preview-q-answer { margin-top: 8px; font-size: 13px; color: #67c23a; }
 </style>

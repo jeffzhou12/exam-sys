@@ -7,5 +7,9 @@ export const examPapersApi = {
   update: (id, data) => request.put(`/exam-papers/${id}`, data),
   publish: (id) => request.post(`/exam-papers/${id}/publish`),
   cancel: (id) => request.post(`/exam-papers/${id}/cancel`),
-  getResults: (id, params) => request.get(`/exam-papers/${id}/results`, { params })
+  getResults: (id, params) => request.get(`/exam-papers/${id}/results`, { params }),
+  getStudentResult: (examPaperId, studentId) =>
+    request.get(`/exam-papers/${examPaperId}/answers/${studentId}`),
+  manualGrade: (examPaperId, answerId, data) =>
+    request.patch(`/exam-papers/${examPaperId}/answers/items/${answerId}/grade`, data)
 }

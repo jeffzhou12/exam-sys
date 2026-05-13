@@ -29,6 +29,16 @@ public class TenantService(IHttpContextAccessor httpContextAccessor, Application
         throw new UnauthorizedAccessException("Missing or invalid X-Tenant-ID header.");
     }
 
+    public Guid? TryGetCurrentTenantId()
+    {
+        var ctx = httpContextAccessor.HttpContext;
+        var headerValue = ctx?.Request.Headers[TenantIdHeader].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(headerValue) && Guid.TryParse(headerValue, out var tenantId))
+            return tenantId;
+        // 无 Header 或解析失败时返回 null，不抛异常
+        return null;
+    }
+
     public string GetCurrentSchemaName()
     {
         var tenantId = GetCurrentTenantId()

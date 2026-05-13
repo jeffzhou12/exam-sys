@@ -1,6 +1,6 @@
 ﻿# ExamSystem — 多租户在线考试系统
 
-基于 **.NET 8**、**PostgreSQL 16** 和 **AI (LLM API)** 构建的多租户在线考试系统，部署于 AWS ECS Fargate。
+基于 **.NET 8**、**Vue 3**、**PostgreSQL 16** 和 **AI (LLM API)** 构建的多租户在线考试系统，部署于 AWS ECS Fargate + CloudFront。
 
 ---
 
@@ -8,29 +8,28 @@
 
 ### 1. 核心业务流程
 
-系统通过"资源池化"与"任务流"的设计思想，将考试全生命周期抽象化：
-
-1. **资源建设**：AI 辅助生成题目 → 进入租户题库。
-2. **组卷策略**：设置大纲、难度、AI 随机或精准抽题 → 生成试卷。
-3. **考试分发**：设定租户范围内的人员、时间、防作弊开关 → 生成考试任务。
-4. **智能阅卷**：客观题自动判分 → 主观题调用 AI 进行语义分析评分。
+1. **资源建设**：AI 辅助生成题目 → 进入租户题库
+2. **组卷策略**：设置大纲、难度、AI 随机或精准抽题 → 生成试卷
+3. **考试分发**：设定租户范围内的人员、时间、防作弊开关 → 生成考试任务
+4. **智能阅卷**：客观题自动判分 → 主观题调用 AI 进行语义分析评分
 
 ### 2. 功能模块划分
 
-#### 管理后台 (Admin Portal)
+#### 管理后台 (Admin Portal — Vue 3)
 
-- **多租户管理**：租户入驻、资源配额（AI 调用次数限制）、权限模板。
-- **AI 题库管理**：
-  - 智能出题：输入知识点，AI 自动生成单选、多选、判断及简答题（JSON 格式入库）。
-  - 题目去重：利用向量相似度（Embedding + pgvector）检测重复题目。
-- **智能组卷**：固定组卷 / 随机组卷 / AI 均衡组卷。
-- **阅卷中心**：AI 辅助判卷（简答题）+ 人工仲裁。
+- **多租户管理**：租户入驻、资源配额、权限模板
+- **用户管理**：按租户隔离的用户列表（SuperAdmin 可跨租户查看）
+- **AI 题库管理**：智能出题、题目 CRUD、分页过滤
+- **智能组卷**：固定组卷 / 随机组卷 / AI 均衡组卷
+- **阅卷中心**：AI 辅助判卷（简答题）+ 人工仲裁
 
-#### 考生前台 (Candidate Portal)
+#### 角色权限
 
-- **考试大厅**：展示可用考试及截止时间。
-- **在线答题**：客观题自动评分，简答题异步 AI 评分。
-- **结果报告**：得分明细 + AI 评语。
+| 角色 | 说明 |
+|------|------|
+| SuperAdmin (`role=-1`) | 全局管理员，无租户隔离，可管理所有租户和用户 |
+| Admin | 租户管理员，管理本租户内所有资源 |
+| Student | 考生，只能查看/提交自己的答卷 |
 
 ---
 
@@ -40,46 +39,62 @@
 
 | 层次 | 技术选型 |
 |------|----------|
-| 后端 | .NET 8 / ASP.NET Core Web API |
-| 数据库 | PostgreSQL 16（JSONB + pgvector） |
-| 缓存 | Redis（StackExchange.Redis） |
-| AI 集成 | OpenAI / Azure OpenAI 兼容接口（可插拔 `IAiService`） |
-| 容器 | Docker（multi-stage，alpine 基础镜像） |
-| 云服务 | AWS ECS Fargate + ALB + ECR + RDS + Secrets Manager |
-| IaC | Terraform |
+| 后端 | .NET 8 / ASP.NET Core Web API（Clean Architecture） |
+| 前端 | Vue 3.4 + Element Plus + Pinia + Vue Router 4 + Vite 5 |
+| 数据库 | PostgreSQL 16（JSONB） |
+| 缓存 | Redis（ElastiCache，StackExchange.Redis） |
+| AI 集成 | DeepSeek / 硅基流动（OpenAI 兼容接口，主备切换） |
+| 容器 | Docker（multi-stage，alpine 基础镜像），端口 8080 |
+| 云服务 | AWS ECS Fargate + ALB + ECR + RDS + Secrets Manager + CloudFront + S3 |
+| IaC | Terraform >= 1.7 |
 | CI/CD | GitHub Actions（OIDC，无长期凭证） |
 
-### 项目分层结构
+### 项目目录结构
 
 ```
 exam-system/
 ├── src/
 │   ├── ExamSystem.Domain/          # 领域层（实体、枚举、仓储接口）
 │   │   ├── Common/                 # BaseEntity, IRepository<T>
-│   │   ├── Entities/               # Tenant, Question, ExamPaper, StudentAnswer, AiAuditLog
+│   │   ├── Entities/               # Tenant, User, Question, ExamPaper, StudentAnswer, AiAuditLog
 │   │   └── Enums/                  # QuestionType, ExamStatus, GradingStatus
 │   │
 │   ├── ExamSystem.Application/     # 应用层（CQRS 风格 Handler）
-│   │   ├── Common/Interfaces/      # IApplicationDbContext, ITenantService, IAiService
+│   │   ├── Common/                 # PaginatedResult<T>, ITenantService, IAiService
+│   │   ├── Auth/                   # LoginCommand
 │   │   ├── Tenants/                # GetTenantsQuery, CreateTenantCommand
-│   │   ├── Questions/              # GetQuestionsQuery, CreateQuestionCommand, GenerateWithAiCommand
-│   │   ├── ExamPapers/             # GetExamPapersQuery, CreateExamPaperCommand, PublishExamPaperCommand
-│   │   └── StudentAnswers/         # SubmitAnswersCommand, GradeWithAiCommand, GetStudentResultQuery
+│   │   ├── Users/                  # GetUsersQuery, CreateUserCommand
+│   │   ├── Questions/              # CRUD + GenerateWithAiCommand
+│   │   ├── ExamPapers/             # CRUD + PublishExamPaperCommand
+│   │   └── StudentAnswers/         # SubmitAnswersCommand, GradeWithAiCommand
 │   │
 │   ├── ExamSystem.Infrastructure/  # 基础设施层
 │   │   ├── Configuration/          # DatabaseConfiguration（Secrets Manager + 环境变量）
-│   │   ├── Data/                   # ApplicationDbContext, EF Configurations, Migrations
+│   │   ├── Data/                   # ApplicationDbContext, EF Migrations
 │   │   ├── MultiTenancy/           # TenantService（X-Tenant-ID 请求头解析）
-│   │   └── AI/                     # AiService（OpenAI 兼容 REST 调用）
+│   │   ├── Auth/                   # LoginCommandHandler（JWT HS256）
+│   │   ├── Caching/                # Redis 缓存服务
+│   │   └── AI/                     # AiService（主备 Provider 切换）
 │   │
-│   └── ExamSystem.API/             # Web API 层
-│       ├── Controllers/            # Health, Tenants, Questions, ExamPapers, StudentAnswers
-│       ├── Middleware/             # TenantMiddleware
+│   └── ExamSystem.API/             # Web API 层（端口 8080）
+│       ├── Controllers/            # Auth, Health, Tenants, Users, Questions, ExamPapers, StudentAnswers
+│       ├── Middleware/             # TenantMiddleware（租户验证）
 │       └── Program.cs
 │
-├── db/init.sql                     # PostgreSQL 初始化脚本（表结构、触发器、Demo租户）
-├── terraform/                      # AWS 基础设施（ECR、ECS、ALB、IAM）
-├── .github/workflows/deploy.yml    # CI/CD 流水线
+├── web/admin/                      # 管理后台前端（Vue 3）
+│   ├── src/
+│   │   ├── views/                  # Login, Dashboard, Tenants, Users, Questions, ExamPapers
+│   │   ├── stores/                 # Pinia（auth, tenant）
+│   │   ├── router/                 # 路由（角色权限守卫）
+│   │   └── api/                    # Axios 封装（自动注入 X-Tenant-ID）
+│   └── .env.production             # VITE_API_BASE_URL=（留空，使用相对路径 /api）
+│
+├── terraform/
+│   ├── modules/                    # alb, ecr, ecs, elasticache, iam, cloudfront
+│   └── environments/prod/          # 生产环境变量（terraform.tfvars）
+│
+├── .github/workflows/deploy.yml    # CI/CD 流水线（路径感知，分离后端/前端部署）
+├── db/init.sql                     # PostgreSQL 初始化脚本
 ├── Dockerfile                      # 多阶段构建（sdk:8.0-alpine → aspnet:8.0-alpine）
 └── ExamSystem.slnx                 # .NET 解决方案文件
 ```
@@ -88,89 +103,72 @@ exam-system/
 
 ## 三、多租户设计
 
-每个租户通过 HTTP 请求头 `X-Tenant-ID: <uuid>` 标识。`TenantMiddleware` 在请求进入业务层前验证租户合法性。所有业务表均含 `tenant_id` 字段，EF Core 查询时自动过滤（行级隔离）。
+每个请求通过 HTTP 头 `X-Tenant-ID: <uuid>` 标识租户。`TenantMiddleware` 在请求进入业务层前验证租户合法性。所有业务表均含 `tenant_id` 字段，EF Core 查询时自动过滤（行级隔离）。
+
+**公开路径**（无需 X-Tenant-ID）：`/healthz`、`/health`、`/swagger`、`/api/auth`、`/api/tenants`、`/api/users`
+
+**SuperAdmin**（`role = -1`）不绑定任何租户，拥有全局权限，TenantMiddleware 自动跳过租户校验。
 
 ---
 
-## 四、数据库配置
+## 四、本地开发
 
-### 环境变量约定（与 ECS 任务定义一致）
+**前置条件**：[.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8)、Node.js 20+、PostgreSQL 16、Redis（可选）
 
-| 变量名 | 说明 | 示例 |
-|--------|------|------|
-| `DB_HOST` | RDS 实例地址 | `db.xxx.rds.amazonaws.com` |
-| `DB_PORT` | 端口（默认 5432） | `5432` |
-| `DB_USER` | 用户名 | `postgres` |
-| `DB_NAME` | 数据库名 | `exam_system` |
-| `DB_SSLMODE` | SSL 模式 | `verify-full`（生产）/ `disable`（本地） |
-| `DB_SSL_ROOT_CERT` | CA 证书路径 | `/app/global-bundle.pem` |
-| `DB_PASSWORD_SECRET_ARN` | Secrets Manager ARN（生产） | `arn:aws:secretsmanager:ap-southeast-1:...` |
-| `DB_PASSWORD` | 明文密码（本地开发 fallback） | `postgres` |
-
-`DB_HOST` 存在时使用环境变量，否则 fallback 到 `appsettings.json` 中的 `ConnectionStrings:DefaultConnection`。
-
-### 初始化数据库
-
-```bash
-# EF Core 迁移（推荐）
-dotnet ef database update \
-  --project src/ExamSystem.Infrastructure \
-  --startup-project src/ExamSystem.API
-
-# 或手动执行 SQL 脚本
-psql -U postgres -d exam_system -f db/init.sql
-```
-
----
-
-## 五、本地开发
-
-**前置条件**：[.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8)、PostgreSQL 16、Redis（可选）
+### 后端
 
 ```powershell
-# 1. 设置环境变量
+# 1. 配置环境变量
 $env:DB_HOST     = "localhost"
 $env:DB_USER     = "postgres"
 $env:DB_PASSWORD = "postgres"
 $env:DB_NAME     = "exam_system_dev"
 
-# 可选 AI 服务
-$env:AI_API_KEY  = "sk-xxxxxxxxxxxx"
-$env:AI_BASE_URL = "https://api.openai.com/v1"
+# 2. 应用数据库迁移
+dotnet ef database update `
+  --project src/ExamSystem.Infrastructure `
+  --startup-project src/ExamSystem.API
 
-# 2. 创建数据库并应用迁移
-createdb -U postgres exam_system_dev
-dotnet ef database update --project src/ExamSystem.Infrastructure --startup-project src/ExamSystem.API
-
-# 3. 启动
+# 3. 启动（http://localhost:8080/swagger）
 dotnet run --project src/ExamSystem.API
-# Swagger UI: http://localhost:8080/swagger
+```
+
+### 前端
+
+```powershell
+cd web/admin
+npm install
+npm run dev   # http://localhost:5173
 ```
 
 ---
 
-## 六、API 端点一览
+## 五、API 端点一览
 
-所有业务接口需携带 `X-Tenant-ID: <uuid>` 请求头（`/health`、`/swagger`、`/api/tenants` 除外）。
+所有业务接口需携带 `Authorization: Bearer <token>` 和 `X-Tenant-ID: <uuid>`（公开路径除外）。
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/health` | 健康检查 |
+| GET | `/healthz` | ALB 健康检查 |
+| POST | `/api/auth/login` | 登录，返回 JWT |
 | GET | `/api/tenants` | 获取租户列表 |
 | POST | `/api/tenants` | 创建租户 |
+| GET | `/api/users` | 获取用户列表（按租户隔离） |
+| POST | `/api/users` | 创建用户 |
 | GET | `/api/questions` | 获取题目列表（分页+过滤） |
 | POST | `/api/questions` | 手动创建题目 |
 | POST | `/api/questions/ai-generate` | AI 自动生成题目 |
 | GET | `/api/exam-papers` | 获取试卷列表 |
 | POST | `/api/exam-papers` | 创建试卷 |
 | POST | `/api/exam-papers/{id}/publish` | 发布试卷 |
-| POST | `/api/exam-papers/{id}/answers` | 提交答案（客观题自动评分） |
-| POST | `/api/exam-papers/{id}/answers/{studentId}/grade-ai` | AI 评阅简答题 |
-| GET | `/api/exam-papers/{id}/answers/{studentId}` | 查询成绩报告 |
+| POST | `/api/student-answers` | 提交答案（客观题自动评分） |
+| POST | `/api/student-answers/{id}/grade-ai` | AI 评阅简答题 |
+
+完整文档见 Swagger UI：`http://localhost:8080/swagger`（本地）
 
 ---
 
-## 七、Docker 本地运行
+## 六、Docker 本地运行
 
 ```bash
 docker build -t exam-system:local .
@@ -186,34 +184,96 @@ docker run -p 8080:8080 \
 
 ---
 
-## 八、部署（AWS ECS Fargate）
+## 七、AWS 部署架构
 
-### 1. Terraform 初始化
+```
+用户浏览器
+    │
+    ▼
+CloudFront (https://d165uf1arxthuu.cloudfront.net)
+    ├── /*        → S3（前端静态资源，Vue 3 SPA）
+    └── /api/*    → ALB → ECS Fargate（.NET 8 API，端口 8080）
+                              │
+                    ┌─────────┴─────────┐
+                    ▼                   ▼
+              RDS PostgreSQL      ElastiCache Redis
+              (ap-southeast-1)   (ap-southeast-1)
+```
+
+### 数据库环境变量（ECS 任务注入）
+
+| 变量名 | 说明 |
+|--------|------|
+| `DB_HOST` | RDS 实例地址 |
+| `DB_PORT` | 端口（默认 5432） |
+| `DB_USER` | 用户名 |
+| `DB_NAME` | 数据库名 |
+| `DB_SSLMODE` | `verify-full`（生产）/ `disable`（本地） |
+| `DB_SSL_ROOT_CERT` | CA 证书路径（`/app/global-bundle.pem`） |
+| `DB_PASSWORD_SECRET_ARN` | AWS Secrets Manager ARN |
+| `REDIS_CONNECTION` | ElastiCache 连接字符串 |
+| `JWT__SECRETKEY` | JWT 签名密钥 |
+| `AI__PRIMARY__APIKEY` | 主力 AI Provider Key |
+| `AI__FALLBACK__APIKEY` | 备用 AI Provider Key |
+
+### AI 服务配置（双 Provider）
+
+| 角色 | Provider | 模型 |
+|------|----------|------|
+| 主力 | DeepSeek 官方 | deepseek-chat |
+| 备用 | 硅基流动 | deepseek-ai/DeepSeek-V3 |
+
+---
+
+## 八、基础设施管理（Terraform）
 
 ```bash
 cd terraform/environments/prod
-cp terraform.tfvars.example terraform.tfvars
-# 填入实际值后执行：
-terraform init && terraform plan && terraform apply
+
+terraform init
+terraform plan
+terraform apply
 ```
 
-### 2. GitHub Actions CI/CD
+### 主要输出
 
-推送到 `main` 分支自动触发：Build → ECR Push → EF 迁移（ECS RunTask）→ ECS 滚动部署
+| 输出 | 值 |
+|------|----|
+| `frontend_url` | `https://d165uf1arxthuu.cloudfront.net` |
+| `alb_dns_name` | ALB DNS（后端 API） |
+| `ecr_repository_url` | ECR 镜像仓库地址 |
 
-需在仓库 Secrets 中配置：
+---
+
+## 九、CI/CD 流水线（GitHub Actions）
+
+推送到 `main` 分支自动触发，**路径感知**（只部署有变更的部分）：
+
+| 触发路径 | 执行 Job |
+|----------|----------|
+| `src/**`, `Dockerfile`, `db/**` | Build → ECR Push → EF 迁移（`ecs run-task`）→ ECS 滚动部署 |
+| `web/admin/**` | `npm run build` → S3 sync → CloudFront 缓存失效 |
+
+支持 `workflow_dispatch` 手动触发并可强制指定部署后端或前端。
+
+### 所需 GitHub Secrets
 
 | Secret | 说明 |
 |--------|------|
 | `AWS_DEPLOY_ROLE_ARN` | OIDC IAM Role ARN |
-| `ECS_SUBNET_ID` | 迁移任务子网 ID |
-| `ECS_SG_ID` | 迁移任务安全组 ID |
+| `ECS_SUBNET_ID` | ECS 迁移任务子网 ID |
+| `ECS_SG_ID` | ECS 迁移任务安全组 ID |
+| `S3_BUCKET_NAME` | 前端 S3 存储桶名称 |
+| `CLOUDFRONT_DISTRIBUTION_ID` | CloudFront 分发 ID |
 
+---
 
-## 九、实施路径
+## 十、实施路径
 
 | 阶段 | 状态 | 内容 |
 |------|------|------|
-| MVP | 完成 | 多租户基础架构、手动出题/组卷、客观题自动评分 |
-| AI 集成 | 完成 | AI 自动出题（OpenAI 兼容接口）、简答题 AI 评分 |
-| 增强 | 规划中 | pgvector 题目去重、AI 能力报告、防作弊监控 |
+| MVP | ✅ 完成 | 多租户基础架构、手动出题/组卷、客观题自动评分 |
+| AI 集成 | ✅ 完成 | AI 自动出题（双 Provider）、简答题 AI 评分 |
+| 管理前端 | ✅ 完成 | Vue 3 管理后台，CloudFront + S3 部署 |
+| CI/CD | ✅ 完成 | GitHub Actions 路径感知自动部署 |
+| 增强 | 🔄 规划中 | pgvector 题目去重、AI 能力报告、防作弊监控、考生前台 |

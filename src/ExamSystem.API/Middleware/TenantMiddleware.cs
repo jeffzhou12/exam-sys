@@ -12,13 +12,27 @@ public class TenantMiddleware(RequestDelegate next)
     private const string TenantIdHeader = "X-Tenant-ID";
 
     // 跳过租户验证的路径前缀
+    // GET /api/exam-papers 及 /api/exam-papers/:id 为公开浏览接口（TenantId 传 null 返回全量）
+    // 注意：提交答案 POST /api/exam-papers/:id/answers 不在此列，仍需租户头
     private static readonly string[] PublicPaths = ["/healthz", "/health", "/swagger", "/api/auth", "/api/tenants", "/api/users"];
+
+    // 仅 GET 方法跳过租户校验的路径前缀（浏览考试列表/详情，不含写操作）
+    private static readonly string[] PublicGetPaths = ["/api/exam-papers"];
 
     public async Task InvokeAsync(HttpContext context, ITenantService tenantService)
     {
         var path = context.Request.Path.Value ?? string.Empty;
 
         if (PublicPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+        {
+            await next(context);
+            return;
+        }
+
+        // GET 试卷列表/详情不要求租户（portal 首页/考试列表公开浏览）
+        // 写操作（POST /answers 等）仍需走完整租户校验
+        if (context.Request.Method == HttpMethods.Get &&
+            PublicGetPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
         {
             await next(context);
             return;

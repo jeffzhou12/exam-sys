@@ -27,7 +27,9 @@ public record ExamPaperQuestionDetailDto(
     int Score,
     int Order,
     string? KnowledgePoint,
-    int Difficulty);
+    int Difficulty,
+    List<string>? Options,
+    string? Answer);
 
 public class GetExamPaperDetailQueryHandler(IApplicationDbContext context)
 {
@@ -46,14 +48,29 @@ public class GetExamPaperDetailQueryHandler(IApplicationDbContext context)
 
         var questions = paper.ExamQuestions
             .OrderBy(eq => eq.Order)
-            .Select(eq => new ExamPaperQuestionDetailDto(
-                eq.QuestionId,
-                eq.Question.Type,
-                eq.Question.Content,
-                eq.Score,
-                eq.Order,
-                eq.Question.KnowledgePoint,
-                eq.Question.Difficulty))
+            .Select(eq =>
+            {
+                List<string>? options = null;
+                if (eq.Question.Options != null)
+                {
+                    try
+                    {
+                        options = System.Text.Json.JsonSerializer.Deserialize<List<string>>(
+                            eq.Question.Options.RootElement.GetRawText());
+                    }
+                    catch { /* ignore */ }
+                }
+                return new ExamPaperQuestionDetailDto(
+                    eq.QuestionId,
+                    eq.Question.Type,
+                    eq.Question.Content,
+                    eq.Score,
+                    eq.Order,
+                    eq.Question.KnowledgePoint,
+                    eq.Question.Difficulty,
+                    options,
+                    eq.Question.CorrectAnswer);
+            })
             .ToList();
 
         return new ExamPaperDetailDto(

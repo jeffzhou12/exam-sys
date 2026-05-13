@@ -1,4 +1,5 @@
 using ExamSystem.Application.Auth.Commands;
+using ExamSystem.Application.Tenants.Queries;
 using ExamSystem.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +14,8 @@ public class AuthController(
     LoginCommandHandler loginHandler,
     RegisterCommandHandler registerHandler,
     ForgotPasswordCommandHandler forgotPasswordHandler,
-    ResetPasswordCommandHandler resetPasswordHandler) : ControllerBase
+    ResetPasswordCommandHandler resetPasswordHandler,
+    GetTenantsQueryHandler getTenantsHandler) : ControllerBase
 {
     /// <summary>用户登录，获取 JWT 访问令牌</summary>
     [HttpPost("login")]
@@ -71,6 +73,19 @@ public class AuthController(
             return BadRequest(new { error });
 
         return Ok(new { message = "密码重置成功，请使用新密码登录。" });
+    }
+
+    /// <summary>获取可用租户列表（公开接口，用于注册页租户选择）</summary>
+    [HttpGet("tenants")]
+    [ProducesResponseType(200)]
+    public async Task<IActionResult> GetPublicTenants(CancellationToken cancellationToken = default)
+    {
+        var result = await getTenantsHandler.Handle(new GetTenantsQuery(1, 200), cancellationToken);
+        var list = result.Items
+            .Where(t => t.IsActive)
+            .Select(t => new { t.Id, t.Name })
+            .ToList();
+        return Ok(list);
     }
 }
 

@@ -9,12 +9,7 @@
     <el-card shadow="never" class="filter-card">
       <el-form :model="query" inline>
         <el-form-item>
-          <el-input
-            v-model="query.search"
-            placeholder="搜索用户名/邮箱"
-            clearable
-            :prefix-icon="Search"
-          />
+          <el-input v-model="query.search" placeholder="搜索用户名/邮箱" clearable :prefix-icon="Search" />
         </el-form-item>
         <el-form-item label="角色">
           <el-select v-model="query.role" placeholder="全部角色" clearable style="width: 120px">
@@ -42,9 +37,6 @@
       <el-table v-loading="loading" :data="tableData" stripe>
         <el-table-column prop="username" label="用户名" min-width="130" />
         <el-table-column prop="email" label="邮箱" min-width="180" />
-        <el-table-column v-if="auth.isSuperAdmin" prop="tenantName" label="所属租户" min-width="130">
-          <template #default="{ row }">{{ row.tenantName || '-' }}</template>
-        </el-table-column>
         <el-table-column label="角色" width="90">
           <template #default="{ row }">
             <el-tag :type="roleTagType(row.role)" size="small">{{ roleLabel(row.role) }}</el-tag>
@@ -63,42 +55,22 @@
         <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="openDialog(row)">编辑</el-button>
-            <el-button
-              size="small"
-              :type="row.isActive ? 'warning' : 'success'"
-              @click="toggleStatus(row)"
-            >{{ row.isActive ? '禁用' : '启用' }}</el-button>
+            <el-button size="small" :type="row.isActive ? 'warning' : 'success'" @click="toggleStatus(row)">{{
+              row.isActive ? '禁用' : '启用' }}</el-button>
             <el-button size="small" type="info" @click="resetPasswordDialog(row)">重置密码</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination
-        v-model:current-page="query.page"
-        v-model:page-size="query.pageSize"
-        :page-sizes="[10, 20, 50]"
-        :total="total"
-        layout="total, sizes, prev, pager, next"
-        class="pagination"
-        @change="loadData"
-      />
+      <el-pagination v-model:current-page="query.page" v-model:page-size="query.pageSize" :page-sizes="[10, 20, 50]"
+        :total="total" layout="total, sizes, prev, pager, next" class="pagination" @change="loadData" />
     </el-card>
 
     <!-- 新建/编辑对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="editingId ? '编辑用户' : '新建用户'"
-      width="500px"
-      @closed="resetForm"
-    >
+    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑用户' : '新建用户'" width="500px" @closed="resetForm">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item v-if="!editingId && auth.isSuperAdmin" label="所属租户" prop="tenantId">
+        <el-form-item v-if="auth.isSuperAdmin" label="所属租户" prop="tenantId">
           <el-select v-model="form.tenantId" placeholder="请选择租户" clearable style="width: 100%">
-            <el-option
-              v-for="t in tenants"
-              :key="t.id"
-              :label="t.name"
-              :value="t.id"
-            />
+            <el-option v-for="t in tenants" :key="t.id" :label="t.name" :value="t.id" />
           </el-select>
         </el-form-item>
         <el-form-item v-if="!editingId" label="用户名" prop="username">
@@ -149,6 +121,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
 
 const auth = useAuthStore()
+
+// 当超级管理员切换租户时自动重新加载
+watch(() => auth.activeTenantId, () => { loadData() })
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -220,6 +195,7 @@ function resetQuery() {
 function openDialog(row = null) {
   if (row) {
     editingId.value = row.id
+    form.tenantId = row.tenantId || null
     form.email = row.email || ''
     form.role = row.role
   } else {
@@ -245,7 +221,9 @@ async function handleSubmit() {
   submitting.value = true
   try {
     if (editingId.value) {
-      await usersApi.update(editingId.value, { email: form.email, role: form.role })
+      const payload = { email: form.email, role: form.role }
+      if (auth.isSuperAdmin) payload.tenantId = form.tenantId
+      await usersApi.update(editingId.value, payload)
       ElMessage.success('更新成功')
     } else {
       await usersApi.create({
@@ -309,16 +287,36 @@ watch(() => auth.activeTenantId, () => {
 </script>
 
 <style scoped>
-.page-container { padding: 20px; }
+.page-container {
+  padding: 20px;
+}
+
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
 }
-.page-header h3 { margin: 0; font-size: 18px; }
-.filter-card { margin-bottom: 16px; }
-.filter-card :deep(.el-card__body) { padding: 16px 16px 0; }
-.table-card :deep(.el-card__body) { padding: 16px; }
-.pagination { margin-top: 16px; justify-content: flex-end; }
+
+.page-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.filter-card {
+  margin-bottom: 16px;
+}
+
+.filter-card :deep(.el-card__body) {
+  padding: 16px 16px 0;
+}
+
+.table-card :deep(.el-card__body) {
+  padding: 16px;
+}
+
+.pagination {
+  margin-top: 16px;
+  justify-content: flex-end;
+}
 </style>

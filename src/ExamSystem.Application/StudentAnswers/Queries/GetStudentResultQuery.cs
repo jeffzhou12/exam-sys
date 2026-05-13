@@ -15,6 +15,7 @@ public record StudentResultDto(
     List<AnswerResultItem> Answers);
 
 public record AnswerResultItem(
+    Guid AnswerId,
     Guid QuestionId,
     string QuestionContent,
     string AnswerContent,
@@ -48,6 +49,7 @@ public class GetStudentResultQueryHandler(IApplicationDbContext context)
         var overallStatus = DetermineOverallStatus(answers.Select(a => a.GradingStatus));
 
         var answerResults = answers.Select(a => new AnswerResultItem(
+            a.Id,
             a.QuestionId,
             a.Question.Content,
             a.AnswerContent,

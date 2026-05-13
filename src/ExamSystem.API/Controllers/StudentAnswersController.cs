@@ -1,7 +1,9 @@
 using ExamSystem.Application.StudentAnswers.Commands;
 using ExamSystem.Application.StudentAnswers.Queries;
+using ExamSystem.Application.Common.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace ExamSystem.API.Controllers;
 
@@ -13,7 +15,9 @@ public class StudentAnswersController(
     SubmitAnswersCommandHandler submitHandler,
     GradeWithAiCommandHandler gradeHandler,
     GetStudentResultQueryHandler resultHandler,
-    ManualGradeCommandHandler manualGradeHandler) : ControllerBase
+    ManualGradeCommandHandler manualGradeHandler,
+    GetStudentExamsQueryHandler studentExamsHandler,
+    ITenantService tenantService) : ControllerBase
 {
     /// <summary>考生提交答案（客观题自动评分，简答题待 AI 评分）</summary>
     [HttpPost]
@@ -80,6 +84,20 @@ public class StudentAnswersController(
             new ManualGradeCommand(answerId, request.Score, request.Feedback),
             cancellationToken);
         return NoContent();
+    }
+
+    /// <summary>查询当前学生参加过的所有考试及成绩（前台専用）</summary>
+    [HttpGet("~/api/student/my-results")]
+    [Authorize(Roles = Roles.Student)]
+    [ProducesResponseType(typeof(List<StudentExamSummaryDto>), 200)]
+    public async Task<IActionResult> GetMyResults(CancellationToken cancellationToken = default)
+    {
+        var studentId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? throw new UnauthorizedAccessException();
+        var tenantId = tenantService.GetCurrentTenantId();
+        var result = await studentExamsHandler.Handle(
+            new GetStudentExamsQuery(studentId, tenantId), cancellationToken);
+        return Ok(result);
     }
 }
 

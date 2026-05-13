@@ -20,6 +20,8 @@ public class QuestionsController(
     UpdateQuestionCommandHandler updateQuestionHandler,
     DeleteQuestionCommandHandler deleteQuestionHandler,
     GenerateQuestionsWithAiCommandHandler generateQuestionsHandler,
+    PreviewAiQuestionsCommandHandler previewAiHandler,
+    BatchCreateQuestionsCommandHandler batchCreateHandler,
     ITenantService tenantService) : ControllerBase
 {
     /// <summary>获取题目列表（分页，支持多维过滤）</summary>
@@ -122,6 +124,42 @@ public class QuestionsController(
 
         return Ok(new { generated = count });
     }
+
+    /// <summary>AI 预览出题（不入库，返回生成结果供人工审核）</summary>
+    [HttpPost("ai-preview")]
+    [ProducesResponseType(typeof(List<AiQuestionPreviewDto>), 200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> PreviewWithAi(
+        [FromBody] PreviewAiQuestionsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await previewAiHandler.Handle(
+            new PreviewAiQuestionsCommand(
+                request.KnowledgePoint,
+                request.TypeConfigs.Select(t => new AiTypeConfig(t.Type, t.Count, t.Difficulty)).ToList()),
+            cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>批量创建题目（审核后保存 AI 生成题目）</summary>
+    [HttpPost("batch")]
+    [ProducesResponseType(typeof(List<Guid>), 200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> BatchCreate(
+        [FromBody] BatchCreateQuestionsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var tenantId = tenantService.GetCurrentTenantId()
+            ?? throw new InvalidOperationException("请先选择租户。");
+        var ids = await batchCreateHandler.Handle(
+            new BatchCreateQuestionsCommand(
+                tenantId,
+                request.Questions.Select(q => new BatchQuestionItem(
+                    q.Type, q.Content, q.Options, q.CorrectAnswer,
+                    q.Explanation, q.KnowledgePoint, q.Difficulty)).ToList()),
+            cancellationToken);
+        return Ok(ids);
+    }
 }
 
 public record CreateQuestionRequest(
@@ -146,4 +184,21 @@ public record GenerateQuestionsRequest(
     string KnowledgePoint,
     QuestionType QuestionType,
     int Count = 5);
+
+public record PreviewAiQuestionsRequest(
+    string KnowledgePoint,
+    List<AiTypeConfigRequest> TypeConfigs);
+
+public record AiTypeConfigRequest(QuestionType Type, int Count, int Difficulty = 3);
+
+public record BatchCreateQuestionsRequest(List<BatchQuestionItemRequest> Questions);
+
+public record BatchQuestionItemRequest(
+    QuestionType Type,
+    string Content,
+    List<string>? Options,
+    string CorrectAnswer,
+    string? Explanation,
+    string? KnowledgePoint,
+    int Difficulty = 1);
 

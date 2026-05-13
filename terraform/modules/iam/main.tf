@@ -160,6 +160,14 @@ resource "aws_iam_role_policy_attachment" "github_actions_deploy" {
 }
 
 # ── S3 + CloudFront 权限（前端部署，可选）────────────────────────────────────
+locals {
+  # 合并所有前端 bucket ARN，过滤空字符串
+  all_frontend_bucket_resources = compact(concat(
+    var.frontend_bucket_arn != "" ? [var.frontend_bucket_arn, "${var.frontend_bucket_arn}/*"] : [],
+    var.portal_bucket_arn   != "" ? [var.portal_bucket_arn,   "${var.portal_bucket_arn}/*"]   : [],
+  ))
+}
+
 resource "aws_iam_policy" "github_actions_frontend" {
   count       = var.enable_frontend_deploy ? 1 : 0
   name        = "${var.name_prefix}-github-actions-frontend"
@@ -177,10 +185,7 @@ resource "aws_iam_policy" "github_actions_frontend" {
           "s3:DeleteObject",
           "s3:ListBucket",
         ]
-        Resource = [
-          var.frontend_bucket_arn,
-          "${var.frontend_bucket_arn}/*",
-        ]
+        Resource = local.all_frontend_bucket_resources
       },
       {
         Sid      = "CloudFrontInvalidate"

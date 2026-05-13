@@ -53,6 +53,7 @@ module "iam" {
   github_repo         = var.github_repo
   enable_frontend_deploy = true
   frontend_bucket_arn    = module.cloudfront.s3_bucket_arn
+  portal_bucket_arn      = module.cloudfront_portal.s3_bucket_arn
 }
 
 # ── ALB ───────────────────────────────────────────────────────────────────────
@@ -138,9 +139,20 @@ resource "aws_security_group_rule" "rds_from_ecs" {
 module "cloudfront" {
   source = "../../modules/cloudfront"
 
-  name         = local.name
-  bucket_name  = "${local.name}-frontend"
-  alb_dns_name = module.alb.alb_dns_name
+  name          = local.name
+  bucket_name   = "${local.name}-frontend"
+  alb_dns_name  = module.alb.alb_dns_name
   force_destroy = var.ecr_force_delete # 开发环境允许销毁，生产建议设 false
-  tags         = local.common_tags
+  tags          = local.common_tags
+}
+
+# ── CloudFront + S3 (Portal 前台考生端) ──────────────────────────────────────
+module "cloudfront_portal" {
+  source = "../../modules/cloudfront"
+
+  name          = "${local.name}-portal"
+  bucket_name   = "${local.name}-portal"
+  alb_dns_name  = module.alb.alb_dns_name
+  force_destroy = var.ecr_force_delete
+  tags          = local.common_tags
 }

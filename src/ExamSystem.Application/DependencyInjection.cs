@@ -21,6 +21,8 @@ public static class DependencyInjection
         services.AddScoped<Questions.Commands.UpdateQuestionCommandHandler>();
         services.AddScoped<Questions.Commands.DeleteQuestionCommandHandler>();
         services.AddScoped<Questions.Commands.GenerateQuestionsWithAiCommandHandler>();
+        services.AddScoped<Questions.Commands.PreviewAiQuestionsCommandHandler>();
+        services.AddScoped<Questions.Commands.BatchCreateQuestionsCommandHandler>();
 
         // 试卷
         services.AddScoped<ExamPapers.Queries.GetExamPapersQueryHandler>();
@@ -36,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<StudentAnswers.Commands.GradeWithAiCommandHandler>();
         services.AddScoped<StudentAnswers.Commands.ManualGradeCommandHandler>();
         services.AddScoped<StudentAnswers.Queries.GetStudentResultQueryHandler>();
+        services.AddScoped<StudentAnswers.Queries.GetStudentExamsQueryHandler>();
 
         // 用户管理
         services.AddScoped<Users.Queries.GetUsersQueryHandler>();

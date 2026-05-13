@@ -24,7 +24,7 @@ public class ExamPapersController(
 {
     /// <summary>获取试卷列表（分页）</summary>
     [HttpGet]
-    [Authorize(Roles = Roles.All)]
+    [AllowAnonymous]  // 允许匿名浏览，无租户头时返回全量考试
     [ProducesResponseType(typeof(PaginatedResult<ExamPaperDto>), 200)]
     public async Task<IActionResult> GetExamPapers(
         [FromQuery] int page = 1,
@@ -32,7 +32,8 @@ public class ExamPapersController(
         [FromQuery] ExamStatus? status = null,
         CancellationToken cancellationToken = default)
     {
-        var tenantId = tenantService.GetCurrentTenantId();
+        // 允许无租户头（portal 首页/考试列表公开浏览），不传租户时返回全量
+        var tenantId = tenantService.TryGetCurrentTenantId();
         var result = await getHandler.Handle(
             new GetExamPapersQuery(tenantId, page, pageSize, status), cancellationToken);
         return Ok(result);
@@ -45,7 +46,8 @@ public class ExamPapersController(
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetExamPaper(Guid id, CancellationToken cancellationToken = default)
     {
-        var tenantId = tenantService.GetCurrentTenantId();
+        // 允许无租户头（portal 考试详情公开浏览）
+        var tenantId = tenantService.TryGetCurrentTenantId();
         var result = await getDetailHandler.Handle(new GetExamPaperDetailQuery(tenantId, id), cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }

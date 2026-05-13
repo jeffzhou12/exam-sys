@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExamSystem.Application.Users.Commands;
 
-public record UpdateUserCommand(Guid UserId, string? Email, UserRole Role);
+public record UpdateUserCommand(Guid UserId, string? Email, UserRole Role, Guid? TenantId = null);
 
 public class UpdateUserCommandHandler(IApplicationDbContext context)
 {
@@ -25,6 +25,8 @@ public class UpdateUserCommandHandler(IApplicationDbContext context)
 
         user.Email = command.Email;
         user.Role = command.Role;
+        if (command.TenantId.HasValue)
+            user.TenantId = command.TenantId.Value;
         user.UpdatedAt = DateTime.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);
