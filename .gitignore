@@ -77,3 +77,16 @@ pnpm-debug.log*
 Thumbs.db
 desktop.ini
 *~
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
+*.log.*
+log/
+log-archive/
+src/**/logs/
+src/**/log/
+web/**/logs/
+web/**/log/
+db/*.log
+db/logs/
