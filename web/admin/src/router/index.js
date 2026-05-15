@@ -64,6 +64,24 @@ const routes = [
         name: 'Questions',
         component: () => import('@/views/questions/QuestionList.vue'),
         meta: { title: '题库管理', roles: ['SuperAdmin', 'Admin', 'Teacher'] }
+      },
+      {
+        path: 'books',
+        name: 'Books',
+        component: () => import('@/views/books/Books.vue'),
+        meta: { title: '图书管理', roles: ['SuperAdmin', 'Admin', 'Teacher'] }
+      },
+      {
+        path: 'messages',
+        name: 'Messages',
+        component: () => import('@/views/messages/MessageList.vue'),
+        meta: { title: '消息管理', roles: ['SuperAdmin', 'Admin'] }
+      },
+      {
+        path: 'audit-logs',
+        name: 'AuditLogs',
+        component: () => import('@/views/audit-logs/AuditLogList.vue'),
+        meta: { title: '审计日志', roles: ['SuperAdmin'] }
       }
     ]
   },
@@ -80,6 +98,16 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
+
+  // SSO 跳转：portal 传来 token，直接写入 auth store，然后去掉参数
+  if (to.query.sso_token) {
+    try {
+      const userObj = JSON.parse(atob(to.query.sso_user))
+      auth.bootstrapFromToken(to.query.sso_token, userObj)
+    } catch { /* 参数异常则忽略，继续走正常鉴权流程 */ }
+    const { sso_token, sso_user, ...restQuery } = to.query
+    return next({ path: to.path, query: restQuery, replace: true })
+  }
 
   if (to.meta.requiresAuth === false) {
     if (auth.isLoggedIn && to.name === 'Login') {

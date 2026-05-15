@@ -101,3 +101,88 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired(false);
     }
 }
+
+public class MessageConfiguration : IEntityTypeConfiguration<Message>
+{
+    public void Configure(EntityTypeBuilder<Message> builder)
+    {
+        builder.ToTable("messages");
+        builder.HasKey(m => m.Id);
+        builder.Property(m => m.SenderName).HasMaxLength(100).IsRequired();
+        builder.Property(m => m.RecipientName).HasMaxLength(100).IsRequired();
+        builder.Property(m => m.Subject).HasMaxLength(500).IsRequired();
+        builder.Property(m => m.Body).HasMaxLength(4000).IsRequired();
+        // AttachedQuestionIds 存储为 JSONB（题目 UUID 数组）
+        builder.Property(m => m.AttachedQuestionIds).HasColumnType("jsonb");
+        builder.HasIndex(m => new { m.RecipientId, m.IsRead });
+        builder.HasIndex(m => m.SenderId);
+    }
+}
+
+public class BookConfiguration : IEntityTypeConfiguration<Book>
+{
+    public void Configure(EntityTypeBuilder<Book> builder)
+    {
+        builder.ToTable("books");
+        builder.HasKey(b => b.Id);
+        builder.Property(b => b.Title).HasMaxLength(500).IsRequired();
+        builder.Property(b => b.Author).HasMaxLength(300);
+        builder.Property(b => b.Publisher).HasMaxLength(300);
+        builder.Property(b => b.Description).HasMaxLength(2000);
+        builder.Property(b => b.CoverImageUrl).HasMaxLength(1000);
+        builder.Property(b => b.PdfFilePath).HasMaxLength(500);
+        builder.Property(b => b.Category).HasMaxLength(100);
+        builder.Property(b => b.Isbn).HasMaxLength(30);
+        builder.Property(b => b.UploadedByName).HasMaxLength(100).IsRequired();
+        // Tags 存储为 JSONB（标签字符串数组）
+        builder.Property(b => b.Tags).HasColumnType("jsonb");
+        builder.HasIndex(b => new { b.TenantId, b.IsActive });
+        builder.HasIndex(b => new { b.TenantId, b.Category });
+    }
+}
+
+public class BookAnnotationConfiguration : IEntityTypeConfiguration<BookAnnotation>
+{
+    public void Configure(EntityTypeBuilder<BookAnnotation> builder)
+    {
+        builder.ToTable("book_annotations");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.UserName).HasMaxLength(100).IsRequired();
+        builder.Property(a => a.SelectedText).HasMaxLength(2000);
+        builder.Property(a => a.Note).HasMaxLength(2000);
+        builder.Property(a => a.AiQuestion).HasMaxLength(1000);
+        builder.Property(a => a.AiAnswer).HasMaxLength(8000);
+        builder.Property(a => a.HighlightColor).HasMaxLength(20).IsRequired();
+        // PositionJson 存储为 JSONB（页面位置坐标 {x,y,width,height}）
+        builder.Property(a => a.PositionJson).HasColumnType("jsonb");
+        builder.HasOne(a => a.Book).WithMany().HasForeignKey(a => a.BookId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(a => new { a.BookId, a.UserId });
+        builder.HasIndex(a => new { a.UserId, a.AnnotationType });
+    }
+}
+
+public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
+{
+    public void Configure(EntityTypeBuilder<AuditLog> builder)
+    {
+        builder.ToTable("audit_logs");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Action).HasMaxLength(20).IsRequired();
+        builder.Property(a => a.Username).HasMaxLength(100);
+        builder.Property(a => a.Role).HasMaxLength(50);
+        builder.Property(a => a.EntityType).HasMaxLength(100);
+        builder.Property(a => a.EntityId).HasMaxLength(100);
+        builder.Property(a => a.RequestPath).HasMaxLength(500).IsRequired();
+        builder.Property(a => a.QueryString).HasMaxLength(2000);
+        builder.Property(a => a.IpAddress).HasMaxLength(45);
+        builder.Property(a => a.UserAgent).HasMaxLength(500);
+        builder.Property(a => a.ErrorMessage).HasMaxLength(2000);
+        // OldValues / NewValues 使用 JSONB 存储变更快照
+        builder.Property(a => a.OldValues).HasColumnType("jsonb");
+        builder.Property(a => a.NewValues).HasColumnType("jsonb");
+        // 审计日志不可变，无 UpdatedAt，忽略 EF Core 自动追踪
+        builder.HasIndex(a => new { a.TenantId, a.CreatedAt });
+        builder.HasIndex(a => new { a.UserId, a.CreatedAt });
+        builder.HasIndex(a => new { a.EntityType, a.EntityId });
+    }
+}

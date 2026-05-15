@@ -4,7 +4,7 @@
     <el-aside :width="isCollapsed ? '64px' : '220px'" class="sidebar">
       <div class="logo">
         <el-icon size="24"><School /></el-icon>
-        <span v-show="!isCollapsed" class="logo-text">考试系统</span>
+        <span v-show="!isCollapsed" class="logo-text">学考平台管理</span>
       </div>
       <el-menu
         :default-active="activeMenu"
@@ -38,6 +38,21 @@
         <el-menu-item v-if="auth.isAdminOrTeacher" index="/questions">
           <el-icon><QuestionFilled /></el-icon>
           <template #title>题库管理</template>
+        </el-menu-item>
+
+        <el-menu-item v-if="auth.isAdminOrTeacher" index="/books">
+          <el-icon><Reading /></el-icon>
+          <template #title>图书管理</template>
+        </el-menu-item>
+
+        <el-menu-item v-if="auth.isAnyAdmin" index="/messages">
+          <el-icon><ChatDotRound /></el-icon>
+          <template #title>消息管理</template>
+        </el-menu-item>
+
+        <el-menu-item v-if="auth.isSuperAdmin" index="/audit-logs">
+          <el-icon><Notebook /></el-icon>
+          <template #title>审计日志</template>
         </el-menu-item>
       </el-menu>
     </el-aside>
@@ -117,7 +132,8 @@ import { tenantsApi } from '@/api/tenants'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import {
   DataBoard, OfficeBuilding, User, Document, QuestionFilled,
-  Expand, Fold, UserFilled, SwitchButton, School
+  Expand, Fold, UserFilled, SwitchButton, School, Reading,
+  ChatDotRound, Notebook
 } from '@element-plus/icons-vue'
 
 const auth = useAuthStore()
@@ -150,7 +166,9 @@ async function loadTenants() {
   if (!auth.isSuperAdmin) return
   try {
     const res = await tenantsApi.getList({ page: 1, pageSize: 200 })
-    tenants.value = res.items
+    tenants.value = res.items || []
+    localStorage.setItem('admin.tenants.cache', JSON.stringify(tenants.value))
+    window.dispatchEvent(new CustomEvent('admin-tenants-updated', { detail: tenants.value }))
   } catch { /* ignore */ }
 }
 
@@ -189,7 +207,7 @@ onMounted(loadTenants)
   height: 60px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: left;
   gap: 10px;
   color: #fff;
   font-size: 18px;

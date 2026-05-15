@@ -26,8 +26,8 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadData">查询</el-button>
-          <el-button @click="resetQuery">重置</el-button>
+          <el-button type="primary" :icon="Search" @click="loadData">查询</el-button>
+          <el-button :icon="Refresh" @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -52,12 +52,12 @@
         <el-table-column prop="lastLoginAt" label="最后登录" width="180">
           <template #default="{ row }">{{ formatDate(row.lastLoginAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="openDialog(row)">编辑</el-button>
-            <el-button size="small" :type="row.isActive ? 'warning' : 'success'" @click="toggleStatus(row)">{{
+            <el-button size="small" type="primary" :icon="Edit" @click="openDialog(row)">编辑</el-button>
+            <el-button size="small" :type="row.isActive ? 'warning' : 'success'" :icon="row.isActive ? Lock : Unlock" @click="toggleStatus(row)">{{
               row.isActive ? '禁用' : '启用' }}</el-button>
-            <el-button size="small" type="info" @click="resetPasswordDialog(row)">重置密码</el-button>
+            <el-button size="small" type="info" :icon="Key" @click="resetPasswordDialog(row)">重置密码</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -92,8 +92,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        <el-button :icon="Close" @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :icon="Check" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
 
@@ -105,8 +105,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="pwdDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleResetPassword">确定</el-button>
+        <el-button :icon="Close" @click="pwdDialogVisible = false">取消</el-button>
+        <el-button type="primary" :icon="Check" :loading="submitting" @click="handleResetPassword">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -118,7 +118,7 @@ import { usersApi } from '@/api/users'
 import { tenantsApi } from '@/api/tenants'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search } from '@element-plus/icons-vue'
+import { Plus, Search, Refresh, Edit, Lock, Unlock, Key, Close, Check } from '@element-plus/icons-vue'
 
 const auth = useAuthStore()
 
@@ -287,9 +287,6 @@ watch(() => auth.activeTenantId, () => {
 </script>
 
 <style scoped>
-.page-container {
-  padding: 20px;
-}
 
 .page-header {
   display: flex;

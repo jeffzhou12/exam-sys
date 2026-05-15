@@ -48,6 +48,34 @@ public static class DependencyInjection
         services.AddScoped<Users.Commands.ToggleUserStatusCommandHandler>();
         services.AddScoped<Users.Commands.AdminResetPasswordCommandHandler>();
 
+        // 在线练习
+        services.AddScoped<Practice.GetPracticeQuestionsQueryHandler>();
+        services.AddScoped<Practice.SubmitPracticeCommandHandler>();
+        services.AddScoped<Practice.GetSimilarQuestionsQueryHandler>();
+        services.AddScoped<Practice.ExplainQuestionCommandHandler>();
+
+        // 站内信
+        services.AddScoped<Messages.SendMessageCommandHandler>();
+        services.AddScoped<Messages.GetMessagesQueryHandler>();
+        services.AddScoped<Messages.MarkMessageReadCommandHandler>();
+        services.AddScoped<Messages.GetTenantTeachersQueryHandler>();
+
+        // 图书
+        services.AddScoped<Books.GetBooksQueryHandler>();
+        services.AddScoped<Books.GetBookByIdQueryHandler>();
+        services.AddScoped<Books.CreateBookCommandHandler>();
+        services.AddScoped<Books.UpdateBookCommandHandler>();
+        services.AddScoped<Books.UploadBookPdfCommandHandler>();
+        services.AddScoped<Books.DeleteBookCommandHandler>();
+        services.AddScoped<Books.GetBookAnnotationsQueryHandler>();
+        services.AddScoped<Books.CreateAnnotationCommandHandler>();
+        services.AddScoped<Books.UpdateAnnotationCommandHandler>();
+        services.AddScoped<Books.DeleteAnnotationCommandHandler>();
+        services.AddScoped<Books.AiAnalyzeTextCommandHandler>();
+
+        // 审计日志
+        services.AddScoped<AuditLogs.GetAuditLogsQueryHandler>();
+
         return services;
     }
 }

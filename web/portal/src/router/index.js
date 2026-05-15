@@ -35,6 +35,42 @@ const routes = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'teacher/exams',
+        name: 'TeacherExams',
+        component: () => import('@/views/TeacherExams.vue'),
+        meta: { requiresAuth: true, roles: ['Teacher'] },
+      },
+      {
+        path: 'teacher/exams/:id/results',
+        name: 'TeacherExamResults',
+        component: () => import('@/views/TeacherExamResults.vue'),
+        meta: { requiresAuth: true, roles: ['Teacher'] },
+      },
+      {
+        path: 'practice',
+        name: 'PracticeSetup',
+        component: () => import('@/views/PracticeSetup.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'wrong-book',
+        name: 'WrongBook',
+        component: () => import('@/views/WrongBook.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'messages',
+        name: 'Messages',
+        component: () => import('@/views/Messages.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'books',
+        name: 'BookList',
+        component: () => import('@/views/BookList.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'login',
         name: 'Login',
         component: () => import('@/views/Login.vue'),
@@ -53,6 +89,24 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/practice/room',
+    name: 'PracticeRoom',
+    component: () => import('@/views/PracticeRoom.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/practice/result',
+    name: 'PracticeResult',
+    component: () => import('@/views/PracticeResult.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/books/:id',
+    name: 'BookReader',
+    component: () => import('@/views/BookReader.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/',
   },
@@ -68,6 +122,8 @@ router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
     next({ name: 'Login', query: { redirect: to.fullPath } })
+  } else if (to.meta.roles && !to.meta.roles.includes(auth.user?.role)) {
+    next({ name: 'Home' })
   } else {
     next()
   }

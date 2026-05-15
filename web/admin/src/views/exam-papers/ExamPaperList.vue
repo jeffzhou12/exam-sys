@@ -23,8 +23,8 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadData">查询</el-button>
-          <el-button @click="resetQuery">重置</el-button>
+          <el-button type="primary" :icon="Search" @click="loadData">查询</el-button>
+          <el-button :icon="Refresh" @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -52,27 +52,34 @@
             <el-button
               v-if="row.status === 0 && auth.isAdminOrTeacher"
               size="small"
+              type="primary"
+              :icon="Edit"
               @click="$router.push(`/exam-papers/${row.id}/edit`)"
             >编辑</el-button>
             <el-button
               v-if="row.status === 0 && auth.isAdminOrTeacher"
               size="small"
               type="success"
+              :icon="Promotion"
               @click="publish(row)"
             >发布</el-button>
             <el-button
               v-if="[1, 2].includes(row.status) && auth.isAdminOrTeacher"
               size="small"
               type="warning"
+              :icon="CircleClose"
               @click="cancel(row)"
             >取消</el-button>
             <el-button
               size="small"
-              type="info"
+              type="primary"
+              :icon="DataLine"
               @click="$router.push(`/exam-papers/${row.id}/results`)"
             >成绩</el-button>
             <el-button
               size="small"
+              type="success"
+              :icon="View"
               @click="openPreview(row)"
             >预览</el-button>
           </template>
@@ -135,7 +142,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { examPapersApi } from '@/api/examPapers'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Loading } from '@element-plus/icons-vue'
+import { Plus, Loading, Search, Refresh, Edit, Promotion, CircleClose, DataLine, View } from '@element-plus/icons-vue'
 
 const auth = useAuthStore()
 const loading = ref(false)
@@ -208,7 +215,6 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-.page-container { padding: 20px; }
 .page-header {
   display: flex;
   justify-content: space-between;

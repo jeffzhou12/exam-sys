@@ -17,7 +17,11 @@ export const useAuthStore = defineStore('portal-auth', () => {
 
   const isLoggedIn = computed(() => !!token.value)
   const tenantId = computed(() => user.value?.tenantId || null)
-  const isStudent = computed(() => user.value?.role === 'Student')
+  const role = computed(() => user.value?.role || '')
+  const isSuperAdmin = computed(() => role.value === 'SuperAdmin')
+  const isAdmin = computed(() => role.value === 'Admin')
+  const isTeacher = computed(() => role.value === 'Teacher')
+  const isStudent = computed(() => role.value === 'Student')
 
   async function login(username, password) {
     const result = await authApi.login({ username, password })
@@ -45,5 +49,5 @@ export const useAuthStore = defineStore('portal-auth', () => {
     localStorage.removeItem('portal-tenantId')
   }
 
-  return { token, user, isLoggedIn, tenantId, isStudent, login, logout }
+  return { token, user, isLoggedIn, tenantId, role, isSuperAdmin, isAdmin, isTeacher, isStudent, login, logout }
 })

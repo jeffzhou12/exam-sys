@@ -80,10 +80,23 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('activeTenantName')
   }
 
+  // 由 SSO 跳转携带的 token 直接写入，无需重新登录
+  function bootstrapFromToken(tokenVal, userObj) {
+    token.value = tokenVal
+    user.value = userObj
+    localStorage.setItem('token', tokenVal)
+    localStorage.setItem('user', JSON.stringify(userObj))
+    if (userObj.role !== 'SuperAdmin' && userObj.tenantId) {
+      activeTenantId.value = userObj.tenantId
+      activeTenantName.value = ''
+      localStorage.setItem('activeTenantId', userObj.tenantId)
+    }
+  }
+
   return {
     token, user, isLoggedIn, role,
     isSuperAdmin, isAdmin, isAnyAdmin, isAdminOrTeacher,
     tenantId, activeTenantId, activeTenantName,
-    login, logout, setActiveTenant
+    login, logout, setActiveTenant, bootstrapFromToken
   }
 })

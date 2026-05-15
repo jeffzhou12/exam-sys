@@ -12,6 +12,10 @@ public interface IApplicationDbContext
     DbSet<ExamQuestion> ExamQuestions { get; }
     DbSet<StudentAnswer> StudentAnswers { get; }
     DbSet<AiAuditLog> AiAuditLogs { get; }
+    DbSet<AuditLog> AuditLogs { get; }
+    DbSet<Message> Messages { get; }
+    DbSet<Book> Books { get; }
+    DbSet<BookAnnotation> BookAnnotations { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

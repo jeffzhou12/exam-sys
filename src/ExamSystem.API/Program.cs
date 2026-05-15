@@ -5,12 +5,29 @@ using ExamSystem.Application;
 using ExamSystem.Application.Common.Models;
 using ExamSystem.Infrastructure;
 using ExamSystem.API.Middleware;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Any;
+using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── Serilog ───────────────────────────────────────────────────────────────────
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateBootstrapLogger();
+
+builder.Host.UseSerilog((ctx, services, cfg) =>
+    cfg.ReadFrom.Configuration(ctx.Configuration)
+       .ReadFrom.Services(services)
+       .Enrich.FromLogContext()
+       .Enrich.WithMachineName()
+       .Enrich.WithThreadId());
 
 // ── JWT 配置 ──────────────────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
@@ -23,7 +40,30 @@ if (!string.IsNullOrWhiteSpace(secretKeyFromEnv))
     jwtSettings = jwtSettings with { SecretKey = secretKeyFromEnv };
 
 // ── 服务注册 ──────────────────────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // 使用统一格式覆盖 FluentValidation 触发的自动 400 响应
+        options.InvalidModelStateResponseFactory = ctx =>
+        {
+            var errors = ctx.ModelState
+                .Where(e => e.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    e => e.Key,
+                    e => e.Value!.Errors.Select(x => x.ErrorMessage).ToArray());
+
+            return new BadRequestObjectResult(new
+            {
+                title  = "请求参数验证失败",
+                status = 400,
+                errors
+            });
+        };
+    });
+
+// FluentValidation 自动验证
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
@@ -98,9 +138,35 @@ builder.Services.AddHttpContextAccessor(); // 供 TenantService 使用
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// 大文件上传限制（PDF 最大 200 MB）
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = 200 * 1024 * 1024;
+});
+builder.WebHost.ConfigureKestrel(o =>
+    o.Limits.MaxRequestBodySize = 200 * 1024 * 1024);
+
 var app = builder.Build();
 
 // ── 中间件管道 ────────────────────────────────────────────────────────────────
+// 1. 全局异常处理（最外层，捕获所有后续中间件的异常）
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+// 2. 请求审计日志（次外层，记录请求进入和响应状态）
+app.UseMiddleware<RequestAuditMiddleware>();
+
+// 开发环境：为本地存储的上传文件（封面图等）提供静态文件服务
+if (app.Environment.IsDevelopment())
+{
+    var uploadsPath = Path.Combine(builder.Environment.ContentRootPath, "uploads");
+    Directory.CreateDirectory(uploadsPath);
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+        RequestPath = "/uploads"
+    });
+}
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -117,4 +183,16 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+try
+{
+    Log.Information("ExamSystem API 启动成功，环境：{Environment}", app.Environment.EnvironmentName);
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "应用程序启动失败");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

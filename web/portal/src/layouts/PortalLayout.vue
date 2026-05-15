@@ -15,11 +15,48 @@
           <router-link to="/" :class="{ active: $route.name === 'Home' }">首页</router-link>
           <router-link to="/exams" :class="{ active: $route.name === 'ExamList' }">考试中心</router-link>
           <router-link
-            v-if="auth.isLoggedIn"
+            v-if="auth.isLoggedIn && auth.isStudent"
             to="/my-results"
             :class="{ active: $route.name === 'MyResults' }">
             我的成绩
           </router-link>
+          <router-link
+            v-if="auth.isLoggedIn"
+            to="/practice"
+            :class="{ active: ['PracticeSetup','PracticeRoom','PracticeResult'].includes($route.name) }">
+            在线练习
+          </router-link>
+          <router-link
+            v-if="auth.isLoggedIn"
+            to="/wrong-book"
+            :class="{ active: $route.name === 'WrongBook' }">
+            错题本
+          </router-link>
+          <router-link
+            v-if="auth.isLoggedIn"
+            to="/messages"
+            :class="{ active: $route.name === 'Messages' }">
+            站内信
+          </router-link>
+          <router-link
+            v-if="auth.isLoggedIn"
+            to="/books"
+            :class="{ active: $route.name === 'BookList' }">
+            图书馆
+          </router-link>
+          <router-link
+            v-if="auth.isTeacher"
+            to="/teacher/exams"
+            :class="{ active: $route.name === 'TeacherExams' || $route.name === 'TeacherExamResults' }">
+            查阅考试
+          </router-link>
+          <a
+            v-if="auth.isAdmin"
+            :href="buildAdminUrl()"
+            target="_blank"
+            class="admin-link">
+            管理后台
+          </a>
         </nav>
 
         <div class="nav-actions">
@@ -34,8 +71,23 @@
               </span>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="results">
+                  <el-dropdown-item v-if="auth.isStudent" command="results">
                     <el-icon><DataAnalysis /></el-icon> 我的成绩
+                  </el-dropdown-item>
+                  <el-dropdown-item v-if="auth.isLoggedIn" command="practice">
+                    <el-icon><Memo /></el-icon> 在线练习
+                  </el-dropdown-item>
+                  <el-dropdown-item v-if="auth.isLoggedIn" command="wrongBook">
+                    <el-icon><Collection /></el-icon> 错题本
+                  </el-dropdown-item>
+                  <el-dropdown-item v-if="auth.isLoggedIn" command="messages">
+                    <el-icon><Message /></el-icon> 站内信
+                  </el-dropdown-item>
+                  <el-dropdown-item v-if="auth.isTeacher" command="teacherExams">
+                    <el-icon><Document /></el-icon> 查阅考试
+                  </el-dropdown-item>
+                  <el-dropdown-item v-if="auth.isAdmin" command="admin">
+                    <el-icon><Setting /></el-icon> 管理后台
                   </el-dropdown-item>
                   <el-dropdown-item divided command="logout">
                     <el-icon><SwitchButton /></el-icon> 退出登录
@@ -73,10 +125,21 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { ArrowDown, DataAnalysis, SwitchButton } from '@element-plus/icons-vue'
+import { ArrowDown, DataAnalysis, SwitchButton, Setting, Document, Memo, Collection, Message } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const auth = useAuthStore()
+
+const adminUrl = import.meta.env.VITE_ADMIN_URL || 'http://localhost:3000'
+
+function buildAdminUrl() {
+  if (!auth.token) return adminUrl
+  const params = new URLSearchParams({
+    sso_token: auth.token,
+    sso_user: btoa(JSON.stringify(auth.user)),
+  })
+  return `${adminUrl}?${params}`
+}
 
 function handleCommand(cmd) {
   if (cmd === 'logout') {
@@ -84,6 +147,16 @@ function handleCommand(cmd) {
     router.push('/')
   } else if (cmd === 'results') {
     router.push('/my-results')
+  } else if (cmd === 'teacherExams') {
+    router.push('/teacher/exams')
+  } else if (cmd === 'admin') {
+    window.open(buildAdminUrl(), '_blank')
+  } else if (cmd === 'practice') {
+    router.push('/practice')
+  } else if (cmd === 'wrongBook') {
+    router.push('/wrong-book')
+  } else if (cmd === 'messages') {
+    router.push('/messages')
   }
 }
 </script>
@@ -148,6 +221,15 @@ function handleCommand(cmd) {
   height: 2px;
   background: #1d4ed8;
   border-radius: 2px;
+}
+
+.nav-links .admin-link {
+  color: #d97706;
+  font-weight: 600;
+}
+
+.nav-links .admin-link:hover {
+  color: #b45309;
 }
 
 .nav-actions {

@@ -1,5 +1,5 @@
 <template>
-  <div class="page-wrap container">
+  <div class="page-wrap">
     <div class="page-header">
       <h1>考试中心</h1>
       <p>选择一场考试，开始你的在线答题</p>
@@ -153,7 +153,7 @@ onMounted(loadData)
 
 <style scoped>
 .page-wrap {
-  padding: 40px 24px 60px;
+  padding: 40px 40px 60px;
 }
 .page-header {
   margin-bottom: 32px;

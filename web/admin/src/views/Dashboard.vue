@@ -146,7 +146,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.page-container { padding: 20px; }
 .page-title { margin: 0 0 20px; font-size: 20px; }
 .stats-row { margin-bottom: 16px; }
 .stat-card {

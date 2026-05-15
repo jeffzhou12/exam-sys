@@ -723,7 +723,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.page-container { padding: 20px; }
 .page-header { margin-bottom: 16px; }
 .breadcrumb-back {
   display: flex;

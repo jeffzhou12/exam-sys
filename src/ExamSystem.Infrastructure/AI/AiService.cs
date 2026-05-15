@@ -73,6 +73,51 @@ public class AiService(
         return new AiGradingResult(score, feedback, 0, 0);
     }
 
+    public async Task<string> ExplainQuestionAsync(
+        string questionContent, string? options, string correctAnswer, string? explanation,
+        CancellationToken cancellationToken = default)
+    {
+        var optionsPart = string.IsNullOrWhiteSpace(options) ? "" : $"\n\n【选项】\n{options}";
+        var explanationPart = string.IsNullOrWhiteSpace(explanation)
+            ? ""
+            : $"\n\n【官方解析参考】\n{explanation}";
+
+        var prompt =
+            "你是一位耐心的学习辅导老师。请对以下题目进行详细讲解，帮助学生深入理解。\n\n" +
+            $"【题目】\n{questionContent}{optionsPart}\n\n" +
+            $"【正确答案】\n{correctAnswer}{explanationPart}\n\n" +
+            "请从以下几个维度进行讲解（使用 Markdown 格式）：\n" +
+            "1. **答案解析**：解释为什么答案是正确的\n" +
+            "2. **知识点梳理**：本题涉及的核心知识点\n" +
+            "3. **常见误区**：学生容易犯的错误及原因\n" +
+            "4. **拓展延伸**：相关知识点的扩展（简要）\n\n" +
+            "语言简洁易懂，适合学生自学。";
+
+        return await CallWithFallbackAsync(
+            provider => CallChatApiAsync(provider, prompt, cancellationToken),
+            cancellationToken);
+    }
+
+    public async Task<string> AnalyzeBookTextAsync(
+        string selectedText, string question, string? bookTitle,
+        CancellationToken cancellationToken = default)
+    {
+        var bookPart = string.IsNullOrWhiteSpace(bookTitle) ? "" : $"（出自《{bookTitle}》）";
+        var prompt =
+            $"你是一位博学的阅读辅导助手。用户正在阅读一段文字{bookPart}，请根据他的问题进行深入解析。\n\n" +
+            $"【原文段落】\n{selectedText}\n\n" +
+            $"【用户问题】\n{question}\n\n" +
+            "请提供清晰、准确的回答，使用 Markdown 格式，结构包括：\n" +
+            "1. **直接回答**：针对问题的核心解答\n" +
+            "2. **深入分析**：结合原文展开讲解\n" +
+            "3. **延伸思考**：相关知识或思考角度（简要）\n\n" +
+            "语言生动、通俗易懂。";
+
+        return await CallWithFallbackAsync(
+            provider => CallChatApiAsync(provider, prompt, cancellationToken),
+            cancellationToken);
+    }
+
     public async Task<float[]> GenerateEmbeddingAsync(
         string text, CancellationToken cancellationToken = default)
     {

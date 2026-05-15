@@ -18,8 +18,8 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadData">查询</el-button>
-          <el-button @click="resetQuery">重置</el-button>
+          <el-button type="primary" :icon="Search" @click="loadData">查询</el-button>
+          <el-button :icon="Refresh" @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -42,10 +42,11 @@
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="openDialog(row)">编辑</el-button>
+            <el-button size="small" type="primary" :icon="Edit" @click="openDialog(row)">编辑</el-button>
             <el-button
               size="small"
               :type="row.isActive ? 'warning' : 'success'"
+              :icon="row.isActive ? Lock : Unlock"
               @click="toggleStatus(row)"
             >
               {{ row.isActive ? '禁用' : '启用' }}
@@ -83,8 +84,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        <el-button :icon="Close" @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :icon="Check" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -94,7 +95,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { tenantsApi } from '@/api/tenants'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search } from '@element-plus/icons-vue'
+import { Plus, Search, Refresh, Edit, Lock, Unlock, Close, Check } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -190,7 +191,6 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-.page-container { padding: 20px; }
 .page-header {
   display: flex;
   justify-content: space-between;

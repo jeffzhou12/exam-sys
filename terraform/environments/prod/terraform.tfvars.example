@@ -40,7 +40,7 @@ rds_security_group_id = "sg-xxxxxxxxxxxxxxxxx"
 
 # ── ECS ───────────────────────────────────────────────────────────────────────
 app_port      = 8080
-task_cpu      = 512   # 0.5 vCPU（.NET 比 Go 占用更多内存）
+task_cpu      = 512   # 0.5 vCPU
 task_memory   = 1024  # MiB
 desired_count = 1
 

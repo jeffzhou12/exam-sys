@@ -30,6 +30,9 @@
             @keyup.enter="handleLogin"
           />
         </el-form-item>
+        <el-form-item>
+          <el-checkbox v-model="rememberMe" class="remember-checkbox">记住我</el-checkbox>
+        </el-form-item>
         <el-button
           type="primary"
           class="submit-btn"
@@ -47,16 +50,19 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+
+const REMEMBER_KEY = 'portal_remember_me'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const formRef = ref(null)
 const loading = ref(false)
+const rememberMe = ref(false)
 
 const form = reactive({ username: '', password: '' })
 const rules = {
@@ -64,12 +70,44 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
 
+onMounted(() => {
+  try {
+    const saved = localStorage.getItem(REMEMBER_KEY)
+    if (saved) {
+      const { username, password } = JSON.parse(saved)
+      form.username = username || ''
+      form.password = password ? atob(password) : ''
+      rememberMe.value = true
+    }
+  } catch {
+    localStorage.removeItem(REMEMBER_KEY)
+  }
+})
+
 async function handleLogin() {
   await formRef.value.validate()
   loading.value = true
   try {
-    await auth.login(form.username, form.password)
+    const user = await auth.login(form.username, form.password)
+    if (rememberMe.value) {
+      localStorage.setItem(REMEMBER_KEY, JSON.stringify({
+        username: form.username,
+        password: btoa(form.password)
+      }))
+    } else {
+      localStorage.removeItem(REMEMBER_KEY)
+    }
     ElMessage.success('登录成功')
+    // 超级管理员直接跳转至管理后台
+    if (user.role === 'SuperAdmin') {
+      const base = import.meta.env.VITE_ADMIN_URL || 'http://localhost:3000'
+      const params = new URLSearchParams({
+        sso_token: auth.token,
+        sso_user: btoa(JSON.stringify(auth.user)),
+      })
+      window.location.href = `${base}?${params}`
+      return
+    }
     const redirect = route.query.redirect || '/'
     router.push(redirect)
   } catch {
@@ -147,5 +185,16 @@ async function handleLogin() {
   color: #bfdbfe;
   font-weight: 500;
   margin-left: 4px;
+}
+.remember-checkbox :deep(.el-checkbox__label) {
+  color: rgba(255, 255, 255, 0.85);
+}
+.remember-checkbox :deep(.el-checkbox__inner) {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+.remember-checkbox :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+  background-color: #409eff;
+  border-color: #409eff;
 }
 </style>

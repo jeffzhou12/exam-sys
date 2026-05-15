@@ -1,3 +1,5 @@
+using Amazon;
+using Amazon.S3;
 using ExamSystem.Application.Common.Interfaces;
 using ExamSystem.Application.Common.Models;
 using ExamSystem.Infrastructure.AI;
@@ -6,6 +8,7 @@ using ExamSystem.Infrastructure.Caching;
 using ExamSystem.Infrastructure.Configuration;
 using ExamSystem.Infrastructure.Data;
 using ExamSystem.Infrastructure.MultiTenancy;
+using ExamSystem.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -113,6 +116,28 @@ public static class DependencyInjection
                 o.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(120);
             });
         services.AddScoped<IAiService, AiService>();
+
+        // ── 文件存储（S3 或本地）────────────────────────────────────────
+        var s3Settings = new S3Settings();
+        configuration.GetSection("AWS:S3").Bind(s3Settings);
+        // 允许环境变量覆盖 BucketName（ECS 任务定义中注入）
+        var bucketFromEnv = Environment.GetEnvironmentVariable("AWS__S3__BUCKETNAME");
+        if (!string.IsNullOrWhiteSpace(bucketFromEnv))
+            s3Settings.BucketName = bucketFromEnv;
+
+        if (!string.IsNullOrWhiteSpace(s3Settings.BucketName))
+        {
+            // 生产环境：ECS 任务角色自动提供凭证；本地开发使用 ~/.aws/credentials 或环境变量
+            services.AddSingleton(s3Settings);
+            services.AddSingleton<IAmazonS3>(_ =>
+                new AmazonS3Client(RegionEndpoint.GetBySystemName(s3Settings.Region)));
+            services.AddScoped<IFileStorageService, S3FileStorageService>();
+        }
+        else
+        {
+            // 本地开发：将文件存储到 uploads 目录
+            services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        }
 
         return services;
     }

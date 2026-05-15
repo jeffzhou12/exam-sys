@@ -29,7 +29,7 @@ public class LoginCommandHandler(
             return null;
 
         var role = user.Role.ToString();
-        var token = jwtTokenService.GenerateToken(user.Username, role, user.TenantId);
+        var token = jwtTokenService.GenerateToken(user.Id, user.Username, role, user.TenantId);
 
         return new LoginResult(
             AccessToken: token,

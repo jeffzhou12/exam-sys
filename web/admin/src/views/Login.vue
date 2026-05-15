@@ -32,6 +32,9 @@
           />
         </el-form-item>
         <el-form-item>
+          <el-checkbox v-model="rememberMe">记住我</el-checkbox>
+        </el-form-item>
+        <el-form-item>
           <el-button
             type="primary"
             :loading="loading"
@@ -47,17 +50,20 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import loginBg from '@/asset/bg.png'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import { User, Lock, School } from '@element-plus/icons-vue'
 
+const REMEMBER_KEY = 'admin_remember_me'
+
 const router = useRouter()
 const auth = useAuthStore()
 const formRef = ref(null)
 const loading = ref(false)
+const rememberMe = ref(false)
 
 const form = reactive({
   username: '',
@@ -69,12 +75,34 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
+onMounted(() => {
+  try {
+    const saved = localStorage.getItem(REMEMBER_KEY)
+    if (saved) {
+      const { username, password } = JSON.parse(saved)
+      form.username = username || ''
+      form.password = password ? atob(password) : ''
+      rememberMe.value = true
+    }
+  } catch {
+    localStorage.removeItem(REMEMBER_KEY)
+  }
+})
+
 async function handleLogin() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   loading.value = true
   try {
     await auth.login(form.username, form.password)
+    if (rememberMe.value) {
+      localStorage.setItem(REMEMBER_KEY, JSON.stringify({
+        username: form.username,
+        password: btoa(form.password)
+      }))
+    } else {
+      localStorage.removeItem(REMEMBER_KEY)
+    }
     ElMessage.success('登录成功')
     router.push('/dashboard')
   } catch {

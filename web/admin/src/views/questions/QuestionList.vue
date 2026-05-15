@@ -32,8 +32,8 @@
           <el-input v-model="query.knowledgePoint" clearable placeholder="输入知识点" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadData">查询</el-button>
-          <el-button @click="resetQuery">重置</el-button>
+          <el-button type="primary" :icon="Search" @click="loadData">查询</el-button>
+          <el-button :icon="Refresh" @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -65,10 +65,10 @@
         <el-table-column prop="createdAt" label="创建时间" width="180">
           <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="openDialog(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteQuestion(row)">删除</el-button>
+            <el-button size="small" type="primary" :icon="Edit" @click="openDialog(row)">编辑</el-button>
+            <el-button size="small" type="danger" :icon="Delete" @click="deleteQuestion(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -160,8 +160,8 @@
         </el-row>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        <el-button :icon="Close" @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :icon="Check" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
 
@@ -184,8 +184,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="aiDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="aiLoading" @click="handleAiGenerate">
+        <el-button :icon="Close" @click="aiDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="aiLoading" :icon="MagicStick" @click="handleAiGenerate">
           开始生成
         </el-button>
       </template>
@@ -197,7 +197,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { questionsApi } from '@/api/questions'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, MagicStick } from '@element-plus/icons-vue'
+import { Plus, MagicStick, Search, Refresh, Edit, Delete, Close, Check } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -380,7 +380,6 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-.page-container { padding: 20px; }
 .page-header {
   display: flex;
   justify-content: space-between;
