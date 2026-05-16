@@ -83,7 +83,7 @@
       class="selection-toolbar"
       :style="{ top: selectionToolbar.y + 'px', left: selectionToolbar.x + 'px' }"
     >
-      <el-button size="small" :icon="Bookmark" @click="addBookmark">书签</el-button>
+      <el-button size="small" :icon="Collection" @click="addBookmark">书签</el-button>
       <el-button size="small" :icon="EditPen" @click="openNoteDialog">备注</el-button>
       <el-button size="small" type="primary" :icon="MagicStick" @click="openAiDialog">AI问答</el-button>
     </div>
@@ -169,7 +169,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft, Minus, Plus, Notebook, Loading, CircleCloseFilled,
-  Delete, Close, Bookmark, EditPen, MagicStick, Check
+  Delete, Close, Collection, EditPen, MagicStick, Check
 } from '@element-plus/icons-vue'
 import { booksApi } from '@/api/books'
 
