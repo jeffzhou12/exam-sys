@@ -12,6 +12,7 @@ using ExamSystem.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using StackExchange.Redis;
 
 namespace ExamSystem.Infrastructure;
@@ -117,27 +118,68 @@ public static class DependencyInjection
             });
         services.AddScoped<IAiService, AiService>();
 
-        // ── 文件存储（S3 或本地）────────────────────────────────────────
-        var s3Settings = new S3Settings();
-        configuration.GetSection("AWS:S3").Bind(s3Settings);
-        // 允许环境变量覆盖 BucketName（ECS 任务定义中注入）
-        var bucketFromEnv = Environment.GetEnvironmentVariable("AWS__S3__BUCKETNAME");
-        if (!string.IsNullOrWhiteSpace(bucketFromEnv))
-            s3Settings.BucketName = bucketFromEnv;
+        // ── 文件存储（Provider 开关 + 模块级 Bucket 路由）────────────────────────
+        var storageSettings = configuration.GetSection("Storage").Get<StorageSettings>() ?? new StorageSettings();
 
-        if (!string.IsNullOrWhiteSpace(s3Settings.BucketName))
+        // 环境变量优先覆盖 Provider（ECS 生产环境注入）
+        var providerFromEnv = Environment.GetEnvironmentVariable("STORAGE__PROVIDER");
+        if (!string.IsNullOrWhiteSpace(providerFromEnv))
+            storageSettings.Provider = providerFromEnv;
+
+        // 向后兼容：旧版 AWS__S3__BUCKETNAME 环境变量 → 写入 Default Bucket
+        var legacyBucket = Environment.GetEnvironmentVariable("AWS__S3__BUCKETNAME");
+        if (!string.IsNullOrWhiteSpace(legacyBucket) && !storageSettings.S3.Buckets.ContainsKey("Default"))
+            storageSettings.S3.Buckets["Default"] = legacyBucket;
+
+        services.AddSingleton(storageSettings);
+
+        if (storageSettings.Provider.Equals("s3", StringComparison.OrdinalIgnoreCase))
         {
-            // 生产环境：ECS 任务角色自动提供凭证；本地开发使用 ~/.aws/credentials 或环境变量
-            services.AddSingleton(s3Settings);
             services.AddSingleton<IAmazonS3>(_ =>
-                new AmazonS3Client(RegionEndpoint.GetBySystemName(s3Settings.Region)));
-            services.AddScoped<IFileStorageService, S3FileStorageService>();
+                new AmazonS3Client(RegionEndpoint.GetBySystemName(storageSettings.S3.Region)));
+
+            services.AddSingleton<IFileStorageFactory>(sp =>
+            {
+                var s3 = sp.GetRequiredService<IAmazonS3>();
+                var expiry = storageSettings.S3.PresignedUrlExpirationMinutes;
+                var storages = new Dictionary<string, IFileStorageService>(StringComparer.OrdinalIgnoreCase);
+
+                // 每个已配置的 Bucket 建立独立实例
+                foreach (var (module, bucket) in storageSettings.S3.Buckets)
+                {
+                    if (!string.IsNullOrWhiteSpace(bucket))
+                        storages[module] = new S3FileStorageService(s3, bucket, expiry);
+                }
+
+                if (storages.Count == 0)
+                    throw new InvalidOperationException(
+                        "Storage:Provider 为 s3，但 Storage:S3:Buckets 中没有任何有效的 Bucket 配置。");
+
+                // 若未显式配置 Default，用第一个已配置模块的实例作为兜底
+                if (!storages.ContainsKey("Default"))
+                    storages["Default"] = storages.Values.First();
+
+                return new FileStorageFactory(storages);
+            });
         }
         else
         {
-            // 本地开发：将文件存储到 uploads 目录
-            services.AddScoped<IFileStorageService, LocalFileStorageService>();
+            // 本地模式：所有模块共享同一本地存储（以 subfolder 区分）
+            services.AddSingleton<IFileStorageFactory>(sp =>
+            {
+                var env = sp.GetRequiredService<IHostEnvironment>();
+                var local = new LocalFileStorageService(env);
+                var storages = new Dictionary<string, IFileStorageService>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Default"] = local
+                };
+                return new FileStorageFactory(storages);
+            });
         }
+
+        // 向后兼容：直接注入 IFileStorageService 的代码自动使用 Default 存储
+        services.AddScoped<IFileStorageService>(sp =>
+            sp.GetRequiredService<IFileStorageFactory>().GetStorage("Default"));
 
         return services;
     }

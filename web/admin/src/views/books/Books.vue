@@ -271,10 +271,14 @@
         </template>
       </el-upload>
       <el-progress
-        v-if="uploadProgress > 0 && uploadProgress < 100"
+        v-if="uploadProgress > 0"
         :percentage="uploadProgress"
+        :status="uploadProgress >= 100 ? '' : undefined"
         style="margin-top:16px"
       />
+      <div v-if="uploadStatusText" style="margin-top:8px;text-align:center;color:#909399;font-size:13px">
+        {{ uploadStatusText }}
+      </div>
       <template #footer>
         <el-button @click="uploadDialog.visible = false">取消</el-button>
         <el-button type="primary" :loading="uploading" :disabled="!selectedFile" @click="submitUpload">
@@ -389,7 +393,6 @@ import {
   Search, Refresh, Plus, Edit, Delete, Upload, Reading,
   Document, DocumentChecked, UploadFilled, OfficeBuilding, View, Loading
 } from '@element-plus/icons-vue'
-import pdfjsWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 const auth = useAuthStore()
 
@@ -560,7 +563,7 @@ async function submitForm() {
     // 如果是上传模式且有待上传的封面文件，先上传图片
     if (coverMode.value === 'upload' && coverFile.value) {
       const res = await mediaApi.uploadImage(coverFile.value)
-      formData.coverImageUrl = res.url
+      formData.coverImageUrl = res.key  // 存储 key，由后端按请求动态拼 URL
     }
 
     const payload = { ...formData, tags: formData.tagList }
@@ -589,11 +592,13 @@ const uploadRef = ref(null)
 const selectedFile = ref(null)
 const uploadProgress = ref(0)
 const uploading = ref(false)
+const uploadStatusText = ref('')
 
 function openUploadDialog(row) {
   uploadDialog.book = row
   selectedFile.value = null
   uploadProgress.value = 0
+  uploadStatusText.value = ''
   uploadDialog.visible = true
 }
 
@@ -615,6 +620,7 @@ async function submitUpload() {
   if (!selectedFile.value) return
   uploading.value = true
   uploadProgress.value = 0
+  uploadStatusText.value = '上传中…'
   try {
     const fd = new FormData()
     fd.append('file', selectedFile.value)
@@ -629,6 +635,7 @@ async function submitUpload() {
     ElMessage.error(e?.message || '上传失败')
   } finally {
     uploading.value = false
+    uploadStatusText.value = ''
   }
 }
 
@@ -686,21 +693,8 @@ async function loadPdfCover(book) {
     const blob = await booksApi.getPdfBlob(book.id, tenantOverride)
     const blobUrl = URL.createObjectURL(blob)
     previewPdfBlobUrl.value = blobUrl
-
-    const pdfjsLib = await import('pdfjs-dist')
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc
-
-    const pdfDoc = await pdfjsLib.getDocument(blobUrl).promise
-    const page = await pdfDoc.getPage(1)
-    const viewport = page.getViewport({ scale: 1.2 })
-
-    const canvas = document.createElement('canvas')
-    canvas.width = viewport.width
-    canvas.height = viewport.height
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
-
-    previewCoverDataUrl.value = canvas.toDataURL('image/jpeg', 0.85)
-  } catch {
+    previewCoverDataUrl.value = false   // 预览面板封面仅靠 coverImageUrl，不再用 pdfjs 渲染
+  } catch (e) {
     previewCoverDataUrl.value = false
   } finally {
     previewCoverLoading.value = false

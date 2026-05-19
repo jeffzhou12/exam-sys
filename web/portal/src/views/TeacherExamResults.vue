@@ -1,5 +1,5 @@
 <template>
-  <div class="teacher-results">
+  <div class="teacher-results container">
     <!-- 返回 -->
     <div class="back-bar">
       <el-button :icon="ArrowLeft" text @click="$router.push('/teacher/exams')">返回考试列表</el-button>

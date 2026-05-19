@@ -1,33 +1,23 @@
 import request from './request'
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
-
 export const booksApi = {
-  getBooks: (params) => request.get('/books', { params, withTenant: true }),
-  getBook: (id) => request.get(`/books/${id}`, { withTenant: true }),
+  getBooks: (params) => request.get('/books', { params }),
+  getBook: (id) => request.get(`/books/${id}`),
 
-  // Load PDF as blob (with auth) then return an object URL
+  // 通过 axios 以 blob 方式加载 PDF，token/tenantId 由 request 拦截器自动注入
   async getPdfObjectUrl(id) {
-    const token = localStorage.getItem('portal-token')
-    const tenantId = localStorage.getItem('portal-tenantId')
-    const headers = {}
-    if (token) headers['Authorization'] = `Bearer ${token}`
-    if (tenantId) headers['X-Tenant-ID'] = tenantId
-
-    const res = await fetch(`${baseURL}/books/${id}/pdf`, { headers })
-    if (!res.ok) throw new Error('PDF 加载失败')
-    const blob = await res.blob()
-    return URL.createObjectURL(blob)
+    const res = await request.get(`/books/${id}/pdf`, { responseType: 'blob' })
+    return URL.createObjectURL(res)
   },
 
   getAnnotations: (bookId) =>
-    request.get(`/books/${bookId}/annotations`, { withTenant: true }),
+    request.get(`/books/${bookId}/annotations`),
   createAnnotation: (bookId, data) =>
-    request.post(`/books/${bookId}/annotations`, data, { withTenant: true }),
+    request.post(`/books/${bookId}/annotations`, data),
   updateAnnotation: (bookId, annId, data) =>
-    request.put(`/books/${bookId}/annotations/${annId}`, data, { withTenant: true }),
+    request.put(`/books/${bookId}/annotations/${annId}`, data),
   deleteAnnotation: (bookId, annId) =>
-    request.delete(`/books/${bookId}/annotations/${annId}`, { withTenant: true }),
+    request.delete(`/books/${bookId}/annotations/${annId}`),
   aiAnalyze: (bookId, data) =>
-    request.post(`/books/${bookId}/ai-analyze`, data, { withTenant: true }),
+    request.post(`/books/${bookId}/ai-analyze`, data),
 }

@@ -1,5 +1,5 @@
 <template>
-  <div class="practice-setup">
+  <div class="practice-setup container">
     <div class="setup-card">
       <div class="setup-header">
         <el-icon size="36" color="#1d4ed8"><Edit /></el-icon>
@@ -152,9 +152,7 @@ onMounted(loadHistory)
 
 <style scoped>
 .practice-setup {
-  max-width: 760px;
-  margin: 48px auto;
-  padding: 0 20px;
+  padding: 40px 40px 60px;
 }
 
 .setup-card {

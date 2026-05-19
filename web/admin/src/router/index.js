@@ -3,12 +3,6 @@ import { useAuthStore } from '@/stores/auth'
 
 const routes = [
   {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/Login.vue'),
-    meta: { requiresAuth: false }
-  },
-  {
     path: '/',
     component: () => import('@/layouts/AdminLayout.vue'),
     meta: { requiresAuth: true },
@@ -92,32 +86,24 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  // 与 vite.config base: '/admin/' 一致，实现同源代理访问
+  history: createWebHistory('/admin/'),
   routes
 })
 
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
 
-  // SSO 跳转：portal 传来 token，直接写入 auth store，然后去掉参数
-  if (to.query.sso_token) {
-    try {
-      const userObj = JSON.parse(atob(to.query.sso_user))
-      auth.bootstrapFromToken(to.query.sso_token, userObj)
-    } catch { /* 参数异常则忽略，继续走正常鉴权流程 */ }
-    const { sso_token, sso_user, ...restQuery } = to.query
-    return next({ path: to.path, query: restQuery, replace: true })
-  }
-
-  if (to.meta.requiresAuth === false) {
-    if (auth.isLoggedIn && to.name === 'Login') {
-      return next('/dashboard')
-    }
-    return next()
-  }
-
   if (!auth.isLoggedIn) {
-    return next('/login')
+    // 跳转到 portal 登录页（绕过 /admin/ base 前缀）
+    window.location.href = '/login'
+    return
+  }
+
+  // 只允许管理员和教师进入后台
+  if (!auth.isAdminOrTeacher) {
+    window.location.href = '/login'
+    return
   }
 
   if (to.meta.roles && !to.meta.roles.includes(auth.role)) {

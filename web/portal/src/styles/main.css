@@ -1,23 +1,265 @@
-* {
+/* ════════════════════════════════════════════════════════
+   全局设计系统 - 学考平台
+════════════════════════════════════════════════════════ */
+
+/* ── 设计令牌 ─────────────────────────────────────────── */
+:root {
+  /* 主色调 */
+  --color-primary:       #1d4ed8;
+  --color-primary-light: #3b82f6;
+  --color-primary-dark:  #1e40af;
+  --color-primary-bg:    rgba(29, 78, 216, 0.06);
+
+  /* 辅助色 */
+  --color-success:  #10b981;
+  --color-warning:  #f59e0b;
+  --color-danger:   #ef4444;
+  --color-info:     #6366f1;
+
+  /* 中性色 */
+  --color-text-1: #0f172a;
+  --color-text-2: #1e293b;
+  --color-text-3: #475569;
+  --color-text-4: #94a3b8;
+  --color-border:  #e2e8f0;
+  --color-border-2:#f1f5f9;
+
+  /* 背景 */
+  --bg-page:   #f8fafc;
+  --bg-card:   #ffffff;
+  --bg-elevated: #ffffff;
+
+  /* 阴影 */
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.06);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.10);
+  --shadow-xl:  0 16px 48px rgba(0,0,0,0.12);
+
+  /* 圆角 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* 字体 */
+  --font-sans: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ── Google Fonts 引入 ───────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap');
+
+/* ── 重置 ────────────────────────────────────────────── */
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+/* ── 基础排版 ──────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
 body {
-  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
-  color: #303133;
-  background: #f5f7fa;
-  line-height: 1.6;
+  font-family: var(--font-sans);
+  color: var(--color-text-2);
+  background: var(--bg-page);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+a { color: inherit; text-decoration: none; }
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-text-1);
+  line-height: 1.35;
+  font-weight: 700;
 }
 
+/* ── 容器 ────────────────────────────────────────────── */
 .container {
   max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  width: 100%;
 }
+
+/* ── 卡片基础样式 ──────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-2);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.card:hover { box-shadow: var(--shadow-md); }
+.card--elevated { box-shadow: var(--shadow-md); }
+.card--elevated:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+
+/* ── Element Plus 全局覆盖 ───────────────────────────── */
+:root {
+  --el-color-primary: #1d4ed8;
+  --el-border-radius-base: 8px;
+  --el-font-family: var(--font-sans);
+}
+
+/* 按钮微调 */
+.el-button--primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.el-button--primary:hover,
+.el-button--primary:focus {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-light);
+}
+
+/* 卡片微调 */
+.el-card {
+  border-radius: var(--radius-lg) !important;
+  border-color: var(--color-border-2) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+.el-card__header {
+  border-bottom-color: var(--color-border-2) !important;
+  font-weight: 600;
+}
+
+/* 分页微调 */
+.el-pagination {
+  justify-content: center;
+  margin-top: 32px;
+}
+
+/* 对话框 */
+.el-dialog {
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-xl) !important;
+  overflow: hidden;
+}
+.el-dialog__header {
+  border-bottom: 1px solid var(--color-border-2);
+  padding: 20px 24px 16px;
+  background: linear-gradient(135deg, #fafbff, #fff);
+}
+.el-dialog__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-1);
+}
+.el-dialog__body { padding: 24px; }
+.el-dialog__footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-border-2);
+  background: #fafbff;
+}
+
+/* 抽屉 */
+.el-drawer {
+  border-radius: var(--radius-md) 0 0 var(--radius-md) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+.el-drawer__header {
+  border-bottom: 1px solid var(--color-border-2);
+  padding: 20px 24px 16px;
+  margin-bottom: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-1);
+}
+.el-drawer__body { padding: 0; }
+
+/* 标签 */
+.el-tag {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* 下拉菜单 */
+.el-dropdown-menu {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border: 1px solid var(--color-border-2) !important;
+  padding: 4px !important;
+  overflow: hidden;
+}
+.el-dropdown-menu__item {
+  border-radius: var(--radius-sm) !important;
+  font-size: 14px !important;
+  margin: 1px 0;
+}
+.el-dropdown-menu__item:hover {
+  background: var(--color-primary-bg) !important;
+  color: var(--color-primary) !important;
+}
+
+/* 表单 */
+.el-form-item__label {
+  font-weight: 500;
+  color: var(--color-text-2);
+}
+.el-input__wrapper {
+  border-radius: var(--radius-sm) !important;
+  transition: box-shadow 0.2s !important;
+}
+.el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--color-primary-light) inset !important;
+}
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--color-primary) inset, 0 0 0 3px rgba(29,78,216,0.12) !important;
+}
+
+/* 骨架屏 */
+.el-skeleton { border-radius: var(--radius-md); overflow: hidden; }
+
+/* 空状态 */
+.el-empty__description { color: var(--color-text-4); }
+
+/* 提示 */
+.el-tooltip__trigger:focus-visible { outline: none; }
+
+/* ── 通用辅助类 ─────────────────────────────────────── */
+.page-wrap {
+  padding: 40px 0 60px;
+}
+
+.page-header {
+  margin-bottom: 32px;
+}
+.page-header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--color-text-1);
+  margin-bottom: 6px;
+  letter-spacing: -0.5px;
+}
+.page-header p {
+  font-size: 15px;
+  color: var(--color-text-3);
+}
+
+/* 加载/空 占位 */
+.loading-wrap, .empty-wrap {
+  padding: 60px 0;
+  text-align: center;
+}
+
+/* ── 响应式 ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .page-header h1 { font-size: 22px; }
+}
+@media (max-width: 480px) {
+  .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+

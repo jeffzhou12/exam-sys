@@ -1,6 +1,5 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import router from '@/router'
 
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -10,12 +9,12 @@ const request = axios.create({
 // 请求拦截器 - 附加 JWT Token 和 X-Tenant-ID
 request.interceptors.request.use(
   config => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('exam-token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-    // 优先使用当前生效租户（Admin 可切换），其次回退到用户自身租户
-    const activeTenantId = localStorage.getItem('activeTenantId')
+    // 所有接口均自动携带当前生效租户 ID
+    const activeTenantId = localStorage.getItem('exam-activeTenantId')
     if (activeTenantId) {
       config.headers['X-Tenant-ID'] = activeTenantId
     }
@@ -30,9 +29,10 @@ request.interceptors.response.use(
   error => {
     const status = error.response?.status
     if (status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      router.push('/login')
+      localStorage.removeItem('exam-token')
+      localStorage.removeItem('exam-user')
+      // 跳转到 portal 登录页（绕过 admin base 路径）
+      window.location.href = '/login'
       ElMessage.error('登录已过期，请重新登录')
     } else if (status === 403) {
       ElMessage.error('无权限访问该资源')

@@ -2,6 +2,7 @@ using ExamSystem.Application.Common.Interfaces;
 using ExamSystem.Application.Common.Models;
 using ExamSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using PDFtoImage;
 using System.Text.Json;
 
 namespace ExamSystem.Application.Books;
@@ -53,10 +54,11 @@ public record GetBooksQuery(
     string? Keyword = null,
     bool? IsActive = true,
     int Page = 1,
-    int PageSize = 20
+    int PageSize = 20,
+    string? MediaBaseUrl = null
 );
 
-public record GetBookByIdQuery(Guid Id, Guid TenantId);
+public record GetBookByIdQuery(Guid Id, Guid TenantId, string? MediaBaseUrl = null);
 
 public record GetBookAnnotationsQuery(Guid BookId, Guid UserId);
 
@@ -92,7 +94,7 @@ public record UpdateBookCommand(
     bool IsActive
 );
 
-public record UploadBookPdfCommand(Guid Id, Guid TenantId, Stream PdfStream, string FileName, long FileSize);
+public record UploadBookPdfCommand(Guid Id, Guid TenantId, Stream PdfStream, string FileName, long FileSize, string? MediaBaseUrl = null);
 
 public record DeleteBookCommand(Guid Id, Guid TenantId);
 
@@ -113,7 +115,7 @@ public record UpdateAnnotationCommand(Guid Id, Guid UserId, string? Note, string
 
 public record DeleteAnnotationCommand(Guid Id, Guid UserId);
 
-public record AiAnalyzeTextCommand(Guid BookId, Guid TenantId, string SelectedText, string Question);
+public record AiAnalyzeTextCommand(Guid BookId, Guid TenantId, string SelectedText, string Question, string? ImageBase64 = null);
 
 // ─── Handlers ────────────────────────────────────────────────────────────────
 
@@ -147,18 +149,55 @@ public class GetBooksQueryHandler(IApplicationDbContext db)
             .Take(q.PageSize)
             .ToListAsync(ct);
 
+        var baseUrl = q.MediaBaseUrl;
         return PaginatedResult<BookDto>.Create(
-            items.Select(ToDto).ToList(),
+            items.Select(b => ToDto(b, baseUrl)).ToList(),
             q.Page, q.PageSize, total);
     }
 
-    private static BookDto ToDto(Book b) => new(
+    private static BookDto ToDto(Book b, string? mediaBaseUrl) => new(
         b.Id, b.TenantId, b.Title, b.Author, b.Publisher, b.Description,
-        b.CoverImageUrl, b.Category,
+        BuildCoverUrl(b.CoverImageUrl, mediaBaseUrl), b.Category,
         ParseTags(b.Tags),
         b.PublishYear, b.Isbn, b.PageCount, b.FileSizeBytes,
         b.IsActive, !string.IsNullOrEmpty(b.PdfFilePath),
         b.UploadedByName, b.CreatedAt);
+
+    /// <summary>
+    /// 将存储的封面值转换为可访问的 URL。
+    /// - 若存储的是 key（如 "covers/abc.jpg"），拼接 mediaBaseUrl 生成完整 URL。
+    /// - 若存储的是含 "/api/media/image/" 的旧完整 URL，提取 key 后用当前 baseUrl 重建，避免 hostname 失效。
+    /// - 若存储的是外部 URL（http/https 且不含本系统 media 路径），原样返回。
+    /// </summary>
+    internal static string? BuildCoverUrl(string? stored, string? mediaBaseUrl)
+    {
+        if (string.IsNullOrEmpty(stored)) return null;
+
+        const string mediaSegment = "/api/media/image/";
+
+        // 旧数据：完整 API URL（本系统代理地址）—— 提取 key 后用当前 baseUrl 重建
+        var idx = stored.IndexOf(mediaSegment, StringComparison.Ordinal);
+        if (idx >= 0)
+        {
+            var key = Uri.UnescapeDataString(stored[(idx + mediaSegment.Length)..]);
+            return BuildFromKey(key, mediaBaseUrl);
+        }
+
+        // 新数据：仅存储 key（不带 scheme）
+        if (!stored.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !stored.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            return BuildFromKey(stored, mediaBaseUrl);
+
+        // 外部 URL（非本系统上传）—— 原样返回
+        return stored;
+    }
+
+    private static string? BuildFromKey(string key, string? mediaBaseUrl)
+    {
+        if (string.IsNullOrEmpty(mediaBaseUrl)) return null;
+        var encodedKey = string.Join("/", key.Split('/').Select(Uri.EscapeDataString));
+        return $"{mediaBaseUrl}/api/media/image/{encodedKey}";
+    }
 
     private static List<string> ParseTags(string? json)
     {
@@ -176,7 +215,7 @@ public class GetBookByIdQueryHandler(IApplicationDbContext db)
         if (b is null) return null;
         return new BookDto(
             b.Id, b.TenantId, b.Title, b.Author, b.Publisher, b.Description,
-            b.CoverImageUrl, b.Category,
+            GetBooksQueryHandler.BuildCoverUrl(b.CoverImageUrl, q.MediaBaseUrl), b.Category,
             ParseTags(b.Tags),
             b.PublishYear, b.Isbn, b.PageCount, b.FileSizeBytes,
             b.IsActive, !string.IsNullOrEmpty(b.PdfFilePath),
@@ -237,10 +276,11 @@ public class UpdateBookCommandHandler(IApplicationDbContext db)
     }
 }
 
-public class UploadBookPdfCommandHandler(IApplicationDbContext db, IFileStorageService fileStorage)
+public class UploadBookPdfCommandHandler(IApplicationDbContext db, IFileStorageFactory storageFactory)
 {
     public async Task Handle(UploadBookPdfCommand cmd, CancellationToken ct = default)
     {
+        var fileStorage = storageFactory.GetStorage("Books");
         var book = await db.Books.FirstOrDefaultAsync(b => b.Id == cmd.Id && b.TenantId == cmd.TenantId, ct)
             ?? throw new KeyNotFoundException("图书不存在");
 
@@ -252,14 +292,47 @@ public class UploadBookPdfCommandHandler(IApplicationDbContext db, IFileStorageS
 
         book.PdfFilePath = relativePath;
         book.FileSizeBytes = cmd.FileSize;
+
+        // 无封面时自动从 PDF 首页生成封面
+        if (string.IsNullOrEmpty(book.CoverImageUrl) && !string.IsNullOrEmpty(cmd.MediaBaseUrl))
+        {
+            try
+            {
+                var mediaStorage = storageFactory.GetStorage("Media");
+
+                // 重新读取已保存的 PDF 并缓冲为可寻址流
+                await using var pdfStream = await fileStorage.GetStreamAsync(relativePath, ct);
+                using var buffered = new MemoryStream();
+                await pdfStream.CopyToAsync(buffered, ct);
+                buffered.Position = 0;
+
+                // 渲染首页为 JPEG（150 DPI 足够封面质量）
+                using var jpegStream = new MemoryStream();
+                Conversion.SaveJpeg(jpegStream, buffered,
+                    options: new RenderOptions(Dpi: 150));
+                jpegStream.Position = 0;
+
+                // 保存封面并写入 URL
+                var coverKey = await mediaStorage.SaveAsync(
+                    jpegStream, $"cover-{cmd.Id}.jpg", "covers", ct);
+                book.CoverImageUrl =
+                    $"{cmd.MediaBaseUrl}/api/media/image/{Uri.EscapeDataString(coverKey)}";
+            }
+            catch
+            {
+                // 封面生成失败不影响 PDF 上传主流程，静默处理
+            }
+        }
+
         await db.SaveChangesAsync(ct);
     }
 }
 
-public class DeleteBookCommandHandler(IApplicationDbContext db, IFileStorageService fileStorage)
+public class DeleteBookCommandHandler(IApplicationDbContext db, IFileStorageFactory storageFactory)
 {
     public async Task Handle(DeleteBookCommand cmd, CancellationToken ct = default)
     {
+        var fileStorage = storageFactory.GetStorage("Books");
         var book = await db.Books.FirstOrDefaultAsync(b => b.Id == cmd.Id && b.TenantId == cmd.TenantId, ct)
             ?? throw new KeyNotFoundException("图书不存在");
 
@@ -311,7 +384,7 @@ public class CreateAnnotationCommandHandler(IApplicationDbContext db, IAiService
         {
             var book = await db.Books.FindAsync([cmd.BookId], ct);
             ann.AiAnswer = await aiService.AnalyzeBookTextAsync(
-                cmd.SelectedText, cmd.AiQuestion, book?.Title, ct);
+                cmd.SelectedText, cmd.AiQuestion, book?.Title, null, ct);
         }
 
         db.BookAnnotations.Add(ann);
@@ -354,6 +427,6 @@ public class AiAnalyzeTextCommandHandler(IApplicationDbContext db, IAiService ai
     {
         var book = await db.Books.FirstOrDefaultAsync(b => b.Id == cmd.BookId && b.TenantId == cmd.TenantId, ct)
             ?? throw new KeyNotFoundException("图书不存在");
-        return await aiService.AnalyzeBookTextAsync(cmd.SelectedText, cmd.Question, book.Title, ct);
+        return await aiService.AnalyzeBookTextAsync(cmd.SelectedText, cmd.Question, book.Title, cmd.ImageBase64, ct);
     }
 }

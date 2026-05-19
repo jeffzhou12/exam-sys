@@ -98,14 +98,9 @@ async function handleLogin() {
       localStorage.removeItem(REMEMBER_KEY)
     }
     ElMessage.success('登录成功')
-    // 超级管理员直接跳转至管理后台
-    if (user.role === 'SuperAdmin') {
-      const base = import.meta.env.VITE_ADMIN_URL || 'http://localhost:3000'
-      const params = new URLSearchParams({
-        sso_token: auth.token,
-        sso_user: btoa(JSON.stringify(auth.user)),
-      })
-      window.location.href = `${base}?${params}`
+    // 管理员和超级管理员直接进入后台
+    if (user.role === 'SuperAdmin' || user.role === 'Admin') {
+      window.location.href = '/admin/'
       return
     }
     const redirect = route.query.redirect || '/'

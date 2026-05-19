@@ -1,5 +1,5 @@
 <template>
-  <div class="teacher-exams">
+  <div class="teacher-exams container">
     <div class="page-header">
       <h2>查阅考试</h2>
       <p class="page-desc">查看本租户下的所有考试，进行阅卷或查看考生成绩</p>

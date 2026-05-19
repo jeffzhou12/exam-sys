@@ -187,11 +187,28 @@ async function handleCommand(cmd) {
       type: 'warning'
     })
     auth.logout()
-    router.push('/login')
+    // 跳转到 portal 登录页（绕过 /admin/ base 前缀）
+    window.location.href = '/login'
   }
 }
 
 onMounted(loadTenants)
+
+// ── 实时登出检测（跨标签 localStorage 变化）───────────────────────
+function onStorageChange(e) {
+  if (e.key === 'exam-token' && !e.newValue) {
+    auth.syncFromStorage()
+    window.location.href = '/login'
+  }
+  // 租户切换同步（另一个标签页切换了租户）
+  if (e.key === 'exam-activeTenantId') {
+    auth.syncFromStorage()
+    router.go(0)
+  }
+}
+
+window.addEventListener('storage', onStorageChange)
+
 </script>
 
 <style scoped>

@@ -1,5 +1,5 @@
 <template>
-  <div class="page-wrap">
+  <div class="page-wrap container">
     <div class="page-header">
       <h1>考试中心</h1>
       <p>选择一场考试，开始你的在线答题</p>
@@ -152,67 +152,105 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-.page-wrap {
-  padding: 40px 40px 60px;
-}
-.page-header {
-  margin-bottom: 32px;
-}
+/* ── 页面布局 ─────────────────────────────────────────── */
+.page-wrap { padding: 48px 0 72px; }
+.page-header { margin-bottom: 0; }
 .page-header h1 {
-  font-size: 30px;
-  font-weight: 700;
-  color: #1e293b;
+  font-size: 32px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
 }
 .page-header p {
   color: #64748b;
   margin-top: 6px;
+  font-size: 15px;
 }
+
+/* ── 筛选栏 ──────────────────────────────────────────── */
 .filter-bar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
-  margin-bottom: 28px;
+  padding: 20px 24px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  margin: 28px 0;
 }
 .status-tabs {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
-.loading-wrap,
-.empty-wrap {
-  padding: 60px 0;
+:deep(.status-tabs .el-button) {
+  border-radius: 8px;
+  font-weight: 500;
 }
+
+/* ── 考试网格 ─────────────────────────────────────────── */
+.loading-wrap, .empty-wrap { padding: 60px 0; }
+
 .exam-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
 }
+
 .exam-card {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 22px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  transition: box-shadow 0.2s;
+  gap: 12px;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+.exam-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #1d4ed8, #3b82f6);
+  opacity: 0;
+  transition: opacity 0.25s;
 }
 .exam-card:hover {
-  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(29,78,216,0.1);
+  border-color: #bfdbfe;
 }
+.exam-card:hover::after { opacity: 1; }
+
 .card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 .card-score {
-  font-size: 13px;
-  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  padding: 3px 10px;
+  border-radius: 20px;
 }
 .card-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 .card-desc {
   font-size: 13px;
@@ -221,22 +259,23 @@ onMounted(loadData)
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  line-height: 1.6;
 }
 .card-meta {
   display: flex;
   gap: 20px;
-  font-size: 13px;
-  color: #64748b;
 }
 .card-meta span {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  font-size: 13px;
+  color: #64748b;
 }
 .card-time {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   font-size: 12px;
   color: #94a3b8;
 }
@@ -244,10 +283,17 @@ onMounted(loadData)
   display: flex;
   gap: 10px;
   margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid #f8fafc;
 }
-.pagination {
-  display: flex;
-  justify-content: center;
-  margin-top: 36px;
+
+/* ── 分页 ────────────────────────────────────────────── */
+.pagination { display: flex; justify-content: center; margin-top: 40px; }
+
+/* ── 响应式 ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .page-wrap { padding: 32px 0 48px; }
+  .filter-bar { flex-direction: column; align-items: flex-start; }
+  .exam-grid { grid-template-columns: 1fr; }
 }
 </style>

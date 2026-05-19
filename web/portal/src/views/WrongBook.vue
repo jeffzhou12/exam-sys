@@ -1,5 +1,5 @@
 <template>
-  <div class="wrong-book">
+  <div class="wrong-book container">
     <div class="page-header">
       <h2><el-icon><Collection /></el-icon> 错题本</h2>
       <div class="header-actions">
@@ -202,9 +202,7 @@ onMounted(load)
 
 <style scoped>
 .wrong-book {
-  max-width: 960px;
-  margin: 32px auto;
-  padding: 0 20px 80px;
+  padding: 40px 40px 60px;
 }
 
 .page-header {

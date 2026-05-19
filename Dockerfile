@@ -20,10 +20,12 @@ RUN dotnet publish src/ExamSystem.API/ExamSystem.API.csproj \
     --no-restore
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 
-# ca-certificates + tzdata（alpine 镜像默认不含）
-RUN apk --no-cache add ca-certificates tzdata
+# ca-certificates + tzdata + libfontconfig（PDFtoImage/SkiaSharp 在 Debian 上需要字体支持）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates tzdata libfontconfig1 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

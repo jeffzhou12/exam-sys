@@ -1,5 +1,5 @@
-<template>
-  <div class="book-list-page">
+﻿<template>
+  <div class="book-list-page container">
     <!-- 搜索 + 筛选 -->
     <div class="filter-bar">
       <el-input
@@ -36,10 +36,20 @@
         class="book-card"
         @click="openBook(book)"
       >
-        <div class="book-cover">
+        <div class="book-cover" style="position:relative;">
           <img v-if="book.coverImageUrl" :src="book.coverImageUrl" :alt="book.title" />
-          <div v-else class="cover-placeholder">
-            <el-icon size="40" color="#bbb"><Reading /></el-icon>
+          <div v-else class="cover-placeholder" :class="{ 'cover-has-pdf': book.hasPdf }">
+            <el-icon size="40" :color="book.hasPdf ? '#409eff' : '#bbb'"><Reading /></el-icon>
+          </div>
+          <div class="pdf-badge" v-if="book.hasPdf">
+            <el-tooltip content="已上传 PDF" placement="top">
+              <el-icon size="18" color="#409eff" style="vertical-align:middle;"><Document /></el-icon>
+            </el-tooltip>
+          </div>
+          <div class="pdf-badge no-pdf" v-else>
+            <el-tooltip content="暂无 PDF" placement="top">
+              <el-icon size="18" color="#dcdfe6" style="vertical-align:middle;"><Document /></el-icon>
+            </el-tooltip>
           </div>
         </div>
         <div class="book-info">
@@ -80,7 +90,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { booksApi } from '@/api/books'
-import { Search, Reading } from '@element-plus/icons-vue'
+import { Search, Reading, Document } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const books = ref([])
@@ -129,7 +139,7 @@ async function fetchBooks() {
 }
 
 function openBook(book) {
-  if (!book.pdfFilePath) {
+  if (!book.hasPdf) {
     ElMessage.warning('该图书暂无 PDF 文件')
     return
   }
@@ -140,17 +150,25 @@ onMounted(fetchBooks)
 </script>
 
 <style scoped>
+/* ── 页面布局 ─────────────────────────────────────────── */
 .book-list-page {
+  padding: 40px 24px 72px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px 16px;
 }
 
+/* ── 筛选区域 ─────────────────────────────────────────── */
 .filter-bar {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
   margin-bottom: 16px;
+  padding: 20px 24px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 .filter-input { width: 280px; }
 .filter-select { width: 160px; }
@@ -159,66 +177,99 @@ onMounted(fetchBooks)
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 24px;
-  padding: 12px 16px;
-  background: #f5f7fa;
-  border-radius: 8px;
+  margin-bottom: 28px;
+  padding: 14px 18px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  gap: 6px;
 }
 .tag-filter-label {
-  color: #666;
-  font-size: 14px;
-  margin-right: 8px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  margin-right: 4px;
 }
 
+/* ── 图书网格 ─────────────────────────────────────────── */
 .book-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 22px;
   min-height: 300px;
 }
 
 .book-card {
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   overflow: hidden;
   cursor: pointer;
-  transition: box-shadow .2s, transform .2s;
+  transition: all 0.25s ease;
 }
 .book-card:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,.12);
-  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(29,78,216,0.1);
+  transform: translateY(-5px);
+  border-color: #bfdbfe;
 }
 
+/* 封面 */
 .book-cover {
   width: 100%;
-  height: 200px;
+  height: 230px;
   overflow: hidden;
-  background: #f0f2f5;
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 .book-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s;
 }
+.book-card:hover .book-cover img { transform: scale(1.04); }
+
 .cover-placeholder {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+.cover-placeholder.cover-has-pdf {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  color: #3b82f6;
 }
 
+.pdf-badge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  background: rgba(255,255,255,0.92);
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  z-index: 2;
+  backdrop-filter: blur(4px);
+}
+.pdf-badge.no-pdf { opacity: 0.4; }
+
+/* 信息区 */
 .book-info {
-  padding: 12px;
+  padding: 14px 14px 12px;
 }
 .book-title {
   font-size: 14px;
-  font-weight: 600;
-  color: #303133;
+  font-weight: 700;
+  color: #0f172a;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -226,18 +277,29 @@ onMounted(fetchBooks)
 }
 .book-author {
   font-size: 12px;
-  margin-bottom: 6px;
+  color: #94a3b8;
+  margin-bottom: 8px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.book-category { margin-bottom: 4px; }
-.book-tags { display: flex; flex-wrap: wrap; }
-.text-muted { color: #999; }
+.book-category { margin-bottom: 6px; }
+.book-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+.text-muted { color: #94a3b8; }
 
+/* 分页 */
 .pagination-wrap {
-  margin-top: 24px;
+  margin-top: 36px;
   display: flex;
   justify-content: center;
+}
+
+/* ── 响应式 ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .book-list-page { padding: 24px 16px 48px; }
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .filter-input, .filter-select { width: 100%; }
+  .book-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .book-cover { height: 180px; }
 }
 </style>

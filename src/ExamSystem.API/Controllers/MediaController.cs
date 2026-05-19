@@ -8,14 +8,15 @@ namespace ExamSystem.API.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/media")]
-public class MediaController(IFileStorageService fileStorage) : ControllerBase
+public class MediaController(IFileStorageFactory storageFactory) : ControllerBase
 {
+    private IFileStorageService MediaStorage => storageFactory.GetStorage("Media");
     private static readonly HashSet<string> AllowedImageTypes =
     [
         "image/jpeg", "image/png", "image/webp", "image/gif"
     ];
 
-    /// <summary>上传图片（封面图等），返回可访问的 URL</summary>
+    /// <summary>上传图片（封面图等），返回通过本服务代理访问的 URL（避免浏览器直接跨域访问 S3）</summary>
     [HttpPost("image")]
     [Authorize(Roles = Roles.AdminOrTeacher)]
     [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
@@ -28,12 +29,43 @@ public class MediaController(IFileStorageService fileStorage) : ControllerBase
             return BadRequest(new { error = "只允许上传 JPG、PNG、WebP 或 GIF 格式图片" });
 
         await using var stream = file.OpenReadStream();
-        var key = await fileStorage.SaveAsync(stream, file.FileName, "covers", ct);
+        var key = await MediaStorage.SaveAsync(stream, file.FileName, "covers", ct);
 
-        // S3：使用 1 年期预签名 URL；本地：使用 /uploads/ 静态文件路径
-        var presignedUrl = await fileStorage.GetPresignedUrlAsync(key, 60 * 24 * 365);
-        var url = presignedUrl ?? $"{Request.Scheme}://{Request.Host}/uploads/{key}";
+        // 统一返回经 API 代理的访问地址，前端直接使用此 URL 显示图片
+        // 对各路径段单独编码，保留 / 分隔符，避免 %2F 在路由中无法自动解码
+        var encodedKey = string.Join("/", key.Split('/').Select(Uri.EscapeDataString));
+        var url = $"{Request.Scheme}://{Request.Host}/api/media/image/{encodedKey}";
+        return Ok(new { url, key });
+    }
 
-        return Ok(new { url });
+    /// <summary>通过 API 代理读取图片（S3 或本地，统一入口，无跨域问题）</summary>
+    [HttpGet("image/{*key}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetImage(string key, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return BadRequest();
+
+        // 兼容旧 URL 中 %2F 未被路由解码的情况
+        key = Uri.UnescapeDataString(key);
+
+        try
+        {
+            var stream = await MediaStorage.GetStreamAsync(key, ct);
+            var ext = Path.GetExtension(key).ToLowerInvariant();
+            var contentType = ext switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png"            => "image/png",
+                ".webp"           => "image/webp",
+                ".gif"            => "image/gif",
+                _                 => "application/octet-stream"
+            };
+            return File(stream, contentType);
+        }
+        catch (FileNotFoundException)
+        {
+            return NotFound();
+        }
     }
 }

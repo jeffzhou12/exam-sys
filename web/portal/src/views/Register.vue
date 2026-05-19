@@ -1,6 +1,6 @@
 <template>
   <div class="auth-page">
-    <div class="auth-card">
+     <div class="auth-card container">
       <div class="auth-logo">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="white" aria-hidden="true">
           <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/>
@@ -157,6 +157,8 @@ onMounted(async () => {
   padding: 48px 40px;
   width: 100%;
   max-width: 460px;
+    margin-left: auto;
+    margin-right: auto;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
   color: #fff;
 }

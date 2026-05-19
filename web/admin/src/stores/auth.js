@@ -1,102 +1,73 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { authApi } from '@/api/auth'
+
+// ── 共享 localStorage Key（与 portal 保持一致，同源共享）────────
+const TOKEN_KEY        = 'exam-token'
+const USER_KEY         = 'exam-user'
+const TENANT_ID_KEY    = 'exam-activeTenantId'
+const TENANT_NAME_KEY  = 'exam-activeTenantName'
 
 // 解析 JWT payload（不验证签名，仅用于读取用户信息）
 function parseJwt(token) {
   try {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-    const payload = JSON.parse(atob(base64))
-    return payload
+    return JSON.parse(atob(base64))
   } catch {
     return null
   }
 }
+// parseJwt 保留备用，admin 不再自行登录，由 portal 写入共享 key
+void parseJwt
 
-export const useAuthStore = defineStore('auth', () => {
-  const token = ref(localStorage.getItem('token') || '')
-  const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
+export const useAuthStore = defineStore('exam-auth', () => {
+  const token            = ref(localStorage.getItem(TOKEN_KEY) || '')
+  const user             = ref(JSON.parse(localStorage.getItem(USER_KEY) || 'null'))
+  const activeTenantId   = ref(localStorage.getItem(TENANT_ID_KEY) || null)
+  const activeTenantName = ref(localStorage.getItem(TENANT_NAME_KEY) || '')
 
-  // 当前生效的租户（Admin 可切换，其他角色固定为自身租户）
-  const activeTenantId = ref(localStorage.getItem('activeTenantId') || null)
-  const activeTenantName = ref(localStorage.getItem('activeTenantName') || '')
+  const isLoggedIn        = computed(() => !!token.value)
+  const role              = computed(() => user.value?.role || '')
+  const isSuperAdmin      = computed(() => role.value === 'SuperAdmin')
+  const isAdmin           = computed(() => role.value === 'Admin')
+  const isAnyAdmin        = computed(() => isSuperAdmin.value || isAdmin.value)
+  const isAdminOrTeacher  = computed(() => ['SuperAdmin', 'Admin', 'Teacher'].includes(role.value))
+  const tenantId          = computed(() => user.value?.tenantId || null)
 
-  const isLoggedIn = computed(() => !!token.value)
-  const role = computed(() => user.value?.role || '')
-  // 超级管理员：无租户，可切换管理全部数据
-  const isSuperAdmin = computed(() => role.value === 'SuperAdmin')
-  // 普通管理员：归属某租户，只能管理该租户数据
-  const isAdmin = computed(() => role.value === 'Admin')
-  // 任意管理员（超级 or 普通）
-  const isAnyAdmin = computed(() => isSuperAdmin.value || isAdmin.value)
-  const isAdminOrTeacher = computed(() => ['SuperAdmin', 'Admin', 'Teacher'].includes(role.value))
-  const tenantId = computed(() => user.value?.tenantId || null)
-
-  async function login(username, password) {
-    const result = await authApi.login({ username, password })
-    token.value = result.accessToken
-    const payload = parseJwt(result.accessToken)
-    user.value = {
-      id: payload?.sub || '',
-      username: result.username || payload?.unique_name || username,
-      role: result.role || payload?.role || '',
-      tenantId: payload?.tenant_id || null
-    }
-    localStorage.setItem('token', token.value)
-    localStorage.setItem('user', JSON.stringify(user.value))
-
-    // 超级管理员：无固定租户，需手动切换
-    // 其他角色（Admin/Teacher/Student）：固定使用自身租户
-    if (user.value.role !== 'SuperAdmin' && user.value.tenantId) {
-      activeTenantId.value = user.value.tenantId
-      activeTenantName.value = ''
-      localStorage.setItem('activeTenantId', user.value.tenantId)
-    }
-
-    return user.value
-  }
-
-  // 仅 SuperAdmin 可调用，切换当前查看的租户
   function setActiveTenant(id, name) {
-    activeTenantId.value = id || null
+    activeTenantId.value   = id || null
     activeTenantName.value = name || ''
     if (id) {
-      localStorage.setItem('activeTenantId', id)
-      localStorage.setItem('activeTenantName', name || '')
+      localStorage.setItem(TENANT_ID_KEY, id)
+      localStorage.setItem(TENANT_NAME_KEY, name || '')
     } else {
-      localStorage.removeItem('activeTenantId')
-      localStorage.removeItem('activeTenantName')
+      localStorage.removeItem(TENANT_ID_KEY)
+      localStorage.removeItem(TENANT_NAME_KEY)
     }
   }
 
   function logout() {
-    token.value = ''
-    user.value = null
-    activeTenantId.value = null
+    token.value            = ''
+    user.value             = null
+    activeTenantId.value   = null
     activeTenantName.value = ''
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    localStorage.removeItem('activeTenantId')
-    localStorage.removeItem('activeTenantName')
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(USER_KEY)
+    localStorage.removeItem(TENANT_ID_KEY)
+    localStorage.removeItem(TENANT_NAME_KEY)
   }
 
-  // 由 SSO 跳转携带的 token 直接写入，无需重新登录
-  function bootstrapFromToken(tokenVal, userObj) {
-    token.value = tokenVal
-    user.value = userObj
-    localStorage.setItem('token', tokenVal)
-    localStorage.setItem('user', JSON.stringify(userObj))
-    if (userObj.role !== 'SuperAdmin' && userObj.tenantId) {
-      activeTenantId.value = userObj.tenantId
-      activeTenantName.value = ''
-      localStorage.setItem('activeTenantId', userObj.tenantId)
-    }
+  // 从 localStorage 重新同步（在 storage 事件中使用）
+  function syncFromStorage() {
+    token.value            = localStorage.getItem(TOKEN_KEY) || ''
+    user.value             = JSON.parse(localStorage.getItem(USER_KEY) || 'null')
+    activeTenantId.value   = localStorage.getItem(TENANT_ID_KEY) || null
+    activeTenantName.value = localStorage.getItem(TENANT_NAME_KEY) || ''
   }
 
   return {
     token, user, isLoggedIn, role,
     isSuperAdmin, isAdmin, isAnyAdmin, isAdminOrTeacher,
     tenantId, activeTenantId, activeTenantName,
-    login, logout, setActiveTenant, bootstrapFromToken
+    logout, setActiveTenant, syncFromStorage,
   }
 })

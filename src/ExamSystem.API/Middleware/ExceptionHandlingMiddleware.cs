@@ -69,6 +69,9 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
     private static (int StatusCode, string Title, string Detail) MapException(Exception exception) =>
         exception switch
         {
+            FileNotFoundException e =>
+                (StatusCodes.Status404NotFound, "文件不存在", e.Message.NullIfEmpty() ?? "请求的文件未找到。"),
+
             UnauthorizedAccessException e =>
                 (StatusCodes.Status401Unauthorized, "未授权", e.Message.NullIfEmpty() ?? "您无权执行此操作。"),
 

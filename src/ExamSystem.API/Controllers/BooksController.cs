@@ -23,8 +23,9 @@ public class BooksController(
     DeleteAnnotationCommandHandler deleteAnnotationHandler,
     AiAnalyzeTextCommandHandler aiAnalyzeHandler,
     ITenantService tenantService,
-    IFileStorageService fileStorage) : ControllerBase
+    IFileStorageFactory fileStorageFactory) : ControllerBase
 {
+    private IFileStorageService BooksStorage => fileStorageFactory.GetStorage("Books");
     private Guid CurrentUserId =>
         Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : Guid.Empty;
 
@@ -46,9 +47,10 @@ public class BooksController(
     {
         // SuperAdmin 未选租户时 tenantId 为 null，表示查看全部租户数据
         var tenantId = tenantService.GetCurrentTenantId();
+        var mediaBaseUrl = $"{Request.Scheme}://{Request.Host}";
 
         var result = await getBooksHandler.Handle(
-            new GetBooksQuery(tenantId, category, tag, keyword, isActive, page, pageSize), ct);
+            new GetBooksQuery(tenantId, category, tag, keyword, isActive, page, pageSize, mediaBaseUrl), ct);
         return Ok(result);
     }
 
@@ -58,8 +60,9 @@ public class BooksController(
     {
         var tenantId = tenantService.GetCurrentTenantId()
             ?? throw new UnauthorizedAccessException("缺少租户信息");
+        var mediaBaseUrl = $"{Request.Scheme}://{Request.Host}";
 
-        var book = await getBookByIdHandler.Handle(new GetBookByIdQuery(id, tenantId), ct);
+        var book = await getBookByIdHandler.Handle(new GetBookByIdQuery(id, tenantId, mediaBaseUrl), ct);
         return book is null ? NotFound() : Ok(book);
     }
 
@@ -110,8 +113,9 @@ public class BooksController(
             ?? throw new UnauthorizedAccessException("缺少租户信息");
 
         await using var stream = file.OpenReadStream();
+        var mediaBaseUrl = $"{Request.Scheme}://{Request.Host}";
         await uploadPdfHandler.Handle(
-            new UploadBookPdfCommand(id, tenantId, stream, file.FileName, file.Length), ct);
+            new UploadBookPdfCommand(id, tenantId, stream, file.FileName, file.Length, mediaBaseUrl), ct);
         return NoContent();
     }
 
@@ -130,13 +134,9 @@ public class BooksController(
         if (string.IsNullOrEmpty(key))
             return NotFound(new { error = "PDF 文件路径无效" });
 
-        // S3：生成预签名 URL，客户端直接从 S3 下载，节省服务器带宽
-        var presignedUrl = await fileStorage.GetPresignedUrlAsync(key);
-        if (presignedUrl is not null)
-            return Redirect(presignedUrl);
-
-        // 本地存储：流式输出
-        var stream = await fileStorage.GetStreamAsync(key, ct);
+        // 始终通过 API 代理流式输出，避免浏览器直接跨域访问 S3 产生 CORS 问题。
+        // 对于需要鉴权的内容，代理模式也更安全（S3 URL 不暴露给客户端）。
+        var stream = await BooksStorage.GetStreamAsync(key, ct);
         return File(stream, "application/pdf", enableRangeProcessing: true);
     }
 
@@ -203,7 +203,7 @@ public class BooksController(
             ?? throw new UnauthorizedAccessException("缺少租户信息");
 
         var answer = await aiAnalyzeHandler.Handle(
-            new AiAnalyzeTextCommand(bookId, tenantId, req.SelectedText, req.Question), ct);
+            new AiAnalyzeTextCommand(bookId, tenantId, req.SelectedText, req.Question, req.ImageBase64), ct);
         return Ok(new { answer });
     }
 
@@ -258,4 +258,4 @@ public record CreateAnnotationRequest(
 
 public record UpdateAnnotationRequest(string? Note, string? AiQuestion, string? HighlightColor);
 
-public record AiAnalyzeRequest(string SelectedText, string Question);
+public record AiAnalyzeRequest(string SelectedText, string Question, string? ImageBase64 = null);

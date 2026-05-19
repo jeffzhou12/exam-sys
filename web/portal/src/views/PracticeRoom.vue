@@ -4,7 +4,7 @@
     <p>正在加载题目…</p>
   </div>
 
-  <div v-else class="practice-room">
+  <div v-else class="practice-room container">
     <!-- 顶部栏 -->
     <div class="practice-header">
       <el-button :icon="ArrowLeft" text @click="confirmExit">退出练习</el-button>

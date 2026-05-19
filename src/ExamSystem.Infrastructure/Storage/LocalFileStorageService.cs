@@ -4,9 +4,19 @@ using Microsoft.Extensions.Hosting;
 namespace ExamSystem.Infrastructure.Storage;
 
 /// <summary>本地磁盘存储服务，将上传文件保存到 uploads 目录（仅用于本地开发）</summary>
-public class LocalFileStorageService(IHostEnvironment env) : IFileStorageService
+public class LocalFileStorageService : IFileStorageService
 {
-    private readonly string _rootPath = Path.Combine(env.ContentRootPath, "uploads");
+    private readonly string _rootPath;
+
+    /// <summary>由 DI 容器直接注入时使用（默认 uploads 目录）</summary>
+    public LocalFileStorageService(IHostEnvironment env)
+        : this(Path.Combine(env.ContentRootPath, "uploads")) { }
+
+    /// <summary>由 FileStorageFactory 手动创建时使用</summary>
+    public LocalFileStorageService(string rootPath)
+    {
+        _rootPath = rootPath;
+    }
 
     public async Task<string> SaveAsync(Stream stream, string fileName, string subfolder, CancellationToken ct = default)
     {

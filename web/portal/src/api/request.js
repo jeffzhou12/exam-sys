@@ -9,14 +9,11 @@ const request = axios.create({
 
 request.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('portal-token')
+    const token = localStorage.getItem('exam-token')
     if (token) config.headers.Authorization = `Bearer ${token}`
-    // 仅当接口明确传入 withTenant: true 时才注入租户头
-    // 首页/考试列表/考试详情等公开浏览接口不传租户
-    if (config.withTenant) {
-      const tenantId = localStorage.getItem('portal-tenantId')
-      if (tenantId) config.headers['X-Tenant-ID'] = tenantId
-    }
+    // 所有接口均自动携带当前生效租户 ID
+    const tenantId = localStorage.getItem('exam-activeTenantId')
+    if (tenantId) config.headers['X-Tenant-ID'] = tenantId
     return config
   },
   (err) => Promise.reject(err),
@@ -27,9 +24,9 @@ request.interceptors.response.use(
   (err) => {
     const status = err.response?.status
     if (status === 401) {
-      localStorage.removeItem('portal-token')
-      localStorage.removeItem('portal-user')
-      localStorage.removeItem('portal-tenantId')
+      localStorage.removeItem('exam-token')
+      localStorage.removeItem('exam-user')
+      localStorage.removeItem('exam-activeTenantId')
       router.push('/login')
       ElMessage.error('请先登录')
     } else if (status === 403) {

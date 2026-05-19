@@ -4,7 +4,7 @@
     <el-button type="primary" @click="$router.push('/practice')">去练习</el-button>
   </div>
 
-  <div v-else class="practice-result">
+  <div v-else class="practice-result container">
     <!-- 总览卡片 -->
     <div class="result-overview">
       <div class="overview-score">

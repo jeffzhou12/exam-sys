@@ -15,6 +15,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5146',
         changeOrigin: true
+      },
+      // 后台管理系统通过 /admin 路由代理
+      '/admin': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
       }
     }
   }

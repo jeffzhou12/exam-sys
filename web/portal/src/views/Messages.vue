@@ -1,5 +1,5 @@
 <template>
-  <div class="messages-page">
+  <div class="messages-page container">
     <div class="page-header">
       <h2><el-icon><Message /></el-icon> 站内信</h2>
       <el-button type="primary" @click="composing = true">
@@ -145,9 +145,7 @@ onMounted(fetchMessages)
 
 <style scoped>
 .messages-page {
-  max-width: 800px;
-  margin: 32px auto;
-  padding: 0 20px 80px;
+  padding: 40px 40px 60px;
 }
 
 .page-header {
