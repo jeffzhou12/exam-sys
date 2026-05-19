@@ -58,7 +58,7 @@ public record GetBooksQuery(
     string? MediaBaseUrl = null
 );
 
-public record GetBookByIdQuery(Guid Id, Guid TenantId, string? MediaBaseUrl = null);
+public record GetBookByIdQuery(Guid Id, Guid? TenantId, string? MediaBaseUrl = null);
 
 public record GetBookAnnotationsQuery(Guid BookId, Guid UserId);
 
@@ -211,7 +211,10 @@ public class GetBookByIdQueryHandler(IApplicationDbContext db)
 {
     public async Task<BookDto?> Handle(GetBookByIdQuery q, CancellationToken ct = default)
     {
-        var b = await db.Books.FirstOrDefaultAsync(x => x.Id == q.Id && x.TenantId == q.TenantId, ct);
+        // TenantId 为 null 时（SuperAdmin 全租户模式），仅按 ID 查找，不限制租户
+        var b = q.TenantId.HasValue
+            ? await db.Books.FirstOrDefaultAsync(x => x.Id == q.Id && x.TenantId == q.TenantId.Value, ct)
+            : await db.Books.FindAsync([q.Id], ct);
         if (b is null) return null;
         return new BookDto(
             b.Id, b.TenantId, b.Title, b.Author, b.Publisher, b.Description,

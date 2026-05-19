@@ -58,8 +58,8 @@ public class BooksController(
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetBook(Guid id, CancellationToken ct = default)
     {
-        var tenantId = tenantService.GetCurrentTenantId()
-            ?? throw new UnauthorizedAccessException("缺少租户信息");
+        // SuperAdmin 未选租户时 tenantId 为 null，允许按 ID 跨租户访问
+        var tenantId = tenantService.GetCurrentTenantId();
         var mediaBaseUrl = $"{Request.Scheme}://{Request.Host}";
 
         var book = await getBookByIdHandler.Handle(new GetBookByIdQuery(id, tenantId, mediaBaseUrl), ct);
@@ -123,14 +123,14 @@ public class BooksController(
     [HttpGet("{id:guid}/pdf")]
     public async Task<IActionResult> GetPdf(Guid id, CancellationToken ct = default)
     {
-        var tenantId = tenantService.GetCurrentTenantId()
-            ?? throw new UnauthorizedAccessException("缺少租户信息");
+        // SuperAdmin 未选租户时 tenantId 为 null，允许按 ID 跨租户访问
+        var tenantId = tenantService.GetCurrentTenantId();
 
         var book = await getBookByIdHandler.Handle(new GetBookByIdQuery(id, tenantId), ct);
         if (book is null) return NotFound();
         if (!book.HasPdf) return NotFound(new { error = "该图书暂未上传 PDF 文件" });
 
-        var key = await GetPdfKeyAsync(id, tenantId, ct);
+        var key = await GetPdfKeyAsync(id, tenantId ?? Guid.Empty, ct);
         if (string.IsNullOrEmpty(key))
             return NotFound(new { error = "PDF 文件路径无效" });
 
