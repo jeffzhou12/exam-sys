@@ -1,18 +1,24 @@
 using ExamSystem.Application.Common.Interfaces;
+using ExamSystem.Domain.Entities;
+using ExamSystem.Domain.Enums;
 using Microsoft.Extensions.Logging;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
+using OpenAI;
+using OpenAI.Chat;
+using OpenAI.Embeddings;
+using System.ClientModel;
 using System.Text.Json;
 
 namespace ExamSystem.Infrastructure.AI;
 
 /// <summary>
-/// AI 服务实现，主力使用 DeepSeek 官方 API，备用硅基流动 DeepSeek。
-/// 当主力 Provider 请求失败时自动 Fallback 到备用 Provider。
+/// AI 服务实现。
+/// 通过 IAiModelConfigService 按租户 + 场景动态解析 AI 配置，
+/// 使用 OpenAI SDK（openai 官方包）以 OpenAI 兼容协议调用任意大模型。
 /// </summary>
 public class AiService(
-    IHttpClientFactory httpClientFactory,
-    AiServiceOptions options,
+    IAiModelConfigService configService,
+    ITenantService tenantService,
+    IApplicationDbContext dbContext,
     ILogger<AiService> logger) : IAiService
 {
     private static readonly JsonSerializerOptions JsonOpts = new()
@@ -33,9 +39,7 @@ public class AiService(
             "- explanation: 解析说明（字符串，可选）\n\n" +
             "只返回 JSON 数组，不要包含任何 Markdown 代码块或额外说明。";
 
-        return await CallWithFallbackAsync(
-            provider => CallChatApiAsync(provider, prompt, cancellationToken),
-            cancellationToken);
+        return await CallChatWithSceneAsync(AiScene.GenerateQuestions, prompt, cancellationToken);
     }
 
     public async Task<AiGradingResult> GradeShortAnswerAsync(
@@ -52,11 +56,8 @@ public class AiService(
             "请以严格的 JSON 格式返回（不包含 Markdown 代码块）：\n" +
             "{\"score\": <整数>, \"feedback\": \"<简洁评语，不超过200字>\"}";
 
-        var raw = await CallWithFallbackAsync(
-            provider => CallChatApiAsync(provider, prompt, cancellationToken),
-            cancellationToken);
+        var raw = await CallChatWithSceneAsync(AiScene.GradeAnswer, prompt, cancellationToken);
 
-        // 去除可能的 markdown 代码块标记
         raw = raw.Trim();
         if (raw.StartsWith("```"))
         {
@@ -93,9 +94,7 @@ public class AiService(
             "4. **拓展延伸**：相关知识点的扩展（简要）\n\n" +
             "语言简洁易懂，适合学生自学。";
 
-        return await CallWithFallbackAsync(
-            provider => CallChatApiAsync(provider, prompt, cancellationToken),
-            cancellationToken);
+        return await CallChatWithSceneAsync(AiScene.ExplainQuestion, prompt, cancellationToken);
     }
 
     public async Task<string> AnalyzeBookTextAsync(
@@ -103,7 +102,7 @@ public class AiService(
         CancellationToken cancellationToken = default)
     {
         var bookPart = string.IsNullOrWhiteSpace(bookTitle) ? "" : $"（出自《{bookTitle}》）";
-        var prompt =
+        var textPrompt =
             $"你是一位博学的阅读辅导助手。用户正在阅读{bookPart}，请根据他的问题进行深入解析。\n\n" +
             (string.IsNullOrWhiteSpace(selectedText) ? "" : $"【原文段落】\n{selectedText}\n\n") +
             $"【用户问题】\n{(string.IsNullOrWhiteSpace(question) ? "请分析这段内容" : question)}\n\n" +
@@ -114,171 +113,163 @@ public class AiService(
             "语言生动、通俗易懂。";
 
         if (!string.IsNullOrWhiteSpace(imageBase64))
-        {
-            return await CallWithFallbackAsync(
-                provider => CallVisionApiAsync(provider, prompt, imageBase64, cancellationToken),
-                cancellationToken);
-        }
+            return await CallVisionWithSceneAsync(AiScene.AnalyzeBook, textPrompt, imageBase64, cancellationToken);
 
-        return await CallWithFallbackAsync(
-            provider => CallChatApiAsync(provider, prompt, cancellationToken),
-            cancellationToken);
+        return await CallChatWithSceneAsync(AiScene.AnalyzeBook, textPrompt, cancellationToken);
     }
 
     public async Task<float[]> GenerateEmbeddingAsync(
         string text, CancellationToken cancellationToken = default)
     {
-        // Embedding 仅走主 Provider（DeepSeek 目前不提供 Embedding，走备用硅基流动）
-        var provider = options.FallbackProvider ?? options.PrimaryProvider;
+        var tenantId = tenantService.TryGetCurrentTenantId();
+        var config = await configService.ResolveConfigAsync(tenantId, AiScene.Embedding, cancellationToken)
+            ?? throw new InvalidOperationException("未找到可用的 AI Embedding 配置，请联系管理员配置。");
 
-        using var client = CreateHttpClient(provider);
-        var request = new { model = provider.EmbeddingModel, input = text };
-        var response = await client.PostAsJsonAsync("embeddings", request, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        if (string.IsNullOrWhiteSpace(config.EmbeddingModel))
+            throw new InvalidOperationException($"AI 配置 [{config.ProviderName}] 未指定 EmbeddingModel。");
 
-        using var doc = await response.Content.ReadFromJsonAsync<JsonDocument>(
-            cancellationToken: cancellationToken);
+        var (openaiClient, _) = CreateOpenAiClient(config);
+        var embeddingClient = openaiClient.GetEmbeddingClient(config.EmbeddingModel);
 
-        return doc!.RootElement
-            .GetProperty("data")[0]
-            .GetProperty("embedding")
-            .EnumerateArray()
-            .Select(e => e.GetSingle())
-            .ToArray();
+        var result = await embeddingClient.GenerateEmbeddingAsync(text, cancellationToken: cancellationToken);
+        var embedding = result.Value.ToFloats().ToArray();
+
+        await TrackUsageAsync(config, "Embedding", embedding.Length, 0, true, cancellationToken);
+        return embedding;
     }
 
-    // ── 内部核心方法 ──────────────────────────────────────────────────────────
-
-    private async Task<T> CallWithFallbackAsync<T>(
-        Func<AiProviderConfig, Task<T>> action,
-        CancellationToken cancellationToken)
+    private async Task<string> CallChatWithSceneAsync(
+        AiScene scene, string userMessage, CancellationToken cancellationToken)
     {
+        var tenantId = tenantService.TryGetCurrentTenantId();
+        var config = await configService.ResolveConfigAsync(tenantId, scene, cancellationToken)
+            ?? throw new InvalidOperationException(
+                $"未找到可用的 AI 配置（场景：{scene}），请联系管理员配置。");
+
+        logger.LogDebug("AI 调用 → 租户:{TenantId} 场景:{Scene} 提供商:{Provider} 模型:{Model}",
+            tenantId, scene, config.ProviderName, config.ChatModel);
+
+        var (openaiClient, _) = CreateOpenAiClient(config);
+        var chatClient = openaiClient.GetChatClient(config.ChatModel);
+
+        var messages = new List<ChatMessage>
+        {
+            new SystemChatMessage("你是一个专业的教育辅助AI，请用中文回复。"),
+            new UserChatMessage(userMessage)
+        };
+
+        var chatOptions = new ChatCompletionOptions
+        {
+            MaxOutputTokenCount = config.MaxTokens,
+            Temperature = (float)config.Temperature
+        };
+
+        ClientResult<ChatCompletion> response;
         try
         {
-            logger.LogDebug("AI 请求 → 主 Provider: {Provider}", options.PrimaryProvider.Name);
-            return await action(options.PrimaryProvider);
+            response = await chatClient.CompleteChatAsync(messages, chatOptions, cancellationToken);
         }
-        catch (Exception ex) when (options.FallbackProvider is not null)
+        catch (Exception ex)
         {
-            logger.LogWarning(ex,
-                "主 Provider ({Primary}) 请求失败，切换到备用 Provider: {Fallback}",
-                options.PrimaryProvider.Name, options.FallbackProvider.Name);
-            return await action(options.FallbackProvider);
+            await TrackUsageAsync(config, scene.ToString(), 0, 0, false, cancellationToken, ex.Message);
+            throw;
         }
+
+        var completion = response.Value;
+        var text = completion.Content[0].Text;
+        var promptTokens = completion.Usage.InputTokenCount;
+        var completionTokens = completion.Usage.OutputTokenCount;
+
+        await TrackUsageAsync(config, scene.ToString(), promptTokens, completionTokens, true, cancellationToken);
+        return text;
     }
 
-    private async Task<string> CallVisionApiAsync(
-        AiProviderConfig provider, string textPrompt, string imageBase64, CancellationToken cancellationToken)
+    private async Task<string> CallVisionWithSceneAsync(
+        AiScene scene, string textPrompt, string imageBase64, CancellationToken cancellationToken)
     {
-        using var client = CreateHttpClient(provider);
+        var tenantId = tenantService.TryGetCurrentTenantId();
+        var config = await configService.ResolveConfigAsync(tenantId, scene, cancellationToken)
+            ?? throw new InvalidOperationException(
+                $"未找到可用的 AI 配置（场景：{scene}），请联系管理员配置。");
 
-        var requestBody = new
+        var (openaiClient, _) = CreateOpenAiClient(config);
+        var chatClient = openaiClient.GetChatClient(config.ChatModel);
+
+        var imageData = BinaryData.FromBytes(Convert.FromBase64String(imageBase64));
+
+        var messages = new List<ChatMessage>
         {
-            model = provider.ChatModel,
-            messages = new object[]
-            {
-                new { role = "system", content = "你是一个专业的教育辅助AI，请用中文回复。" },
-                new
-                {
-                    role = "user",
-                    content = new object[]
-                    {
-                        new { type = "text", text = textPrompt },
-                        new
-                        {
-                            type = "image_url",
-                            image_url = new { url = $"data:image/jpeg;base64,{imageBase64}" }
-                        }
-                    }
-                }
-            },
-            temperature = 0.7,
-            max_tokens = 4096
+            new SystemChatMessage("你是一个专业的教育辅助AI，请用中文回复。"),
+            new UserChatMessage(
+                ChatMessageContentPart.CreateTextPart(textPrompt),
+                ChatMessageContentPart.CreateImagePart(imageData, "image/jpeg"))
         };
 
-        var response = await client.PostAsJsonAsync("chat/completions", requestBody, JsonOpts, cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
+        var chatOptions = new ChatCompletionOptions
         {
-            // 视觉模型不可用时回退到纯文本
-            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new HttpRequestException(
-                $"AI Vision API [{provider.Name}] 返回错误 {(int)response.StatusCode}: {errorBody}");
-        }
-
-        using var doc = await response.Content.ReadFromJsonAsync<JsonDocument>(
-            cancellationToken: cancellationToken);
-
-        return doc!.RootElement
-            .GetProperty("choices")[0]
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString() ?? string.Empty;
-    }
-
-    private async Task<string> CallChatApiAsync(
-        AiProviderConfig provider, string userMessage, CancellationToken cancellationToken)
-    {
-        using var client = CreateHttpClient(provider);
-
-        var requestBody = new
-        {
-            model = provider.ChatModel,
-            messages = new[]
-            {
-                new { role = "system", content = "你是一个专业的教育辅助AI，请用中文回复。" },
-                new { role = "user",   content = userMessage }
-            },
-            temperature = 0.7,
-            max_tokens = 4096
+            MaxOutputTokenCount = config.MaxTokens,
+            Temperature = (float)config.Temperature
         };
 
-        var response = await client.PostAsJsonAsync("chat/completions", requestBody, JsonOpts, cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
+        ClientResult<ChatCompletion> response;
+        try
         {
-            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new HttpRequestException(
-                $"AI API [{provider.Name}] 返回错误 {(int)response.StatusCode}: {errorBody}");
+            response = await chatClient.CompleteChatAsync(messages, chatOptions, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "视觉 API 调用失败，退回纯文本模式");
+            await TrackUsageAsync(config, scene.ToString(), 0, 0, false, cancellationToken, ex.Message);
+            return await CallChatWithSceneAsync(scene, textPrompt, cancellationToken);
         }
 
-        using var doc = await response.Content.ReadFromJsonAsync<JsonDocument>(
-            cancellationToken: cancellationToken);
+        var completion = response.Value;
+        var text = completion.Content[0].Text;
+        var promptTokens = completion.Usage.InputTokenCount;
+        var completionTokens = completion.Usage.OutputTokenCount;
 
-        return doc!.RootElement
-            .GetProperty("choices")[0]
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString() ?? string.Empty;
+        await TrackUsageAsync(config, scene.ToString(), promptTokens, completionTokens, true, cancellationToken);
+        return text;
     }
 
-    private HttpClient CreateHttpClient(AiProviderConfig provider)
+    private static (OpenAIClient client, AiModelConfig config) CreateOpenAiClient(AiModelConfig config)
     {
-        var client = httpClientFactory.CreateClient("AiService");
-        client.BaseAddress = new Uri(provider.BaseUrl.TrimEnd('/') + "/");
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", provider.ApiKey);
-        client.Timeout = TimeSpan.FromSeconds(90);
-        return client;
+        var clientOptions = new OpenAIClientOptions
+        {
+            Endpoint = new Uri(config.BaseUrl.TrimEnd('/'))
+        };
+        var client = new OpenAIClient(new ApiKeyCredential(config.ApiKey), clientOptions);
+        return (client, config);
+    }
+
+    private async Task TrackUsageAsync(
+        AiModelConfig config, string operation,
+        int promptTokens, int completionTokens,
+        bool isSuccess, CancellationToken ct,
+        string? errorMessage = null)
+    {
+        var totalTokens = promptTokens + completionTokens;
+        try
+        {
+            dbContext.AiAuditLogs.Add(new AiAuditLog
+            {
+                TenantId         = config.TenantId ?? Guid.Empty,
+                Operation        = operation,
+                ModelName        = config.ChatModel,
+                PromptTokens     = promptTokens,
+                CompletionTokens = completionTokens,
+                TotalTokens      = totalTokens,
+                IsSuccess        = isSuccess,
+                ErrorMessage     = errorMessage
+            });
+            await dbContext.SaveChangesAsync(ct);
+
+            if (isSuccess && totalTokens > 0)
+                await configService.IncrementUsageAsync(config.Id, totalTokens, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "AI 审计日志写入失败");
+        }
     }
 }
-
-// ── 配置模型 ──────────────────────────────────────────────────────────────────
-
-/// <summary>单个 AI Provider 配置</summary>
-public class AiProviderConfig
-{
-    public string Name { get; set; } = string.Empty;
-    public string BaseUrl { get; set; } = string.Empty;
-    public string ApiKey { get; set; } = string.Empty;
-    public string ChatModel { get; set; } = "deepseek-chat";
-    public string EmbeddingModel { get; set; } = "BAAI/bge-m3";
-}
-
-/// <summary>AI 服务整体配置（主 + 备）</summary>
-public class AiServiceOptions
-{
-    public AiProviderConfig PrimaryProvider { get; set; } = new();
-    public AiProviderConfig? FallbackProvider { get; set; }
-}
-

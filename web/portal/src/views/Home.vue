@@ -9,7 +9,7 @@
           智能 · 高效 · 公正的在线考试平台
         </div>
         <h1 class="hero-title">
-          学习，从<span class="hero-title-accent">此刻</span>开始
+          高效学习，认真考试，从<span class="hero-title-accent">此刻</span>开始
         </h1>
         <p class="hero-subtitle">
           支持单选、多选、判断、简答等多种题型<br/>
@@ -54,16 +54,81 @@
     <section class="features-section">
       <div class="container">
         <div class="section-title-group">
+          <div class="section-eyebrow">核心功能</div>
           <h2 class="section-title">为什么选择我们</h2>
-          <p class="section-subtitle">专为在线教育场景设计的考试系统</p>
+          <p class="section-subtitle">专为在线教育场景打磨，每一处细节都服务于真实教学需求</p>
         </div>
-        <div class="features-grid">
-          <div class="feature-card" v-for="f in features" :key="f.title">
-            <div class="feature-icon" :style="{ '--icon-color': f.color }">
-              <el-icon size="26" color="#fff"><component :is="f.icon" /></el-icon>
+
+        <div class="features-list">
+          <div
+            v-for="(f, idx) in features"
+            :key="f.title"
+            class="feature-row"
+            :class="idx % 2 === 1 ? 'feature-row--reverse' : ''"
+          >
+            <!-- 装饰视觉面板 -->
+            <div class="feature-visual" :style="{ background: f.bg }">
+              <div class="feature-visual-inner">
+                <!-- 大图标 -->
+                <div class="feature-big-icon" :style="{ background: f.color }">
+                  <el-icon size="36" color="#fff"><component :is="f.icon" /></el-icon>
+                </div>
+                <!-- 装饰徽章序号 -->
+                <div class="feature-seq" :style="{ color: f.accent }">0{{ idx + 1 }}</div>
+                <!-- 动态装饰图形 -->
+                <div class="feature-deco" :class="'feature-deco--' + f.decoType" :style="{ '--c': f.accent }">
+                  <template v-if="f.decoType === 'qtype'">
+                    <div class="deco-qtype">
+                      <div class="dq-chip" v-for="t in ['单选题','多选题','判断题','简答题']" :key="t" :style="{ '--chip-c': f.accent }">{{ t }}</div>
+                    </div>
+                  </template>
+                  <template v-else-if="f.decoType === 'ai'">
+                    <div class="deco-ai">
+                      <div class="deco-ai-ring deco-ai-ring--1"></div>
+                      <div class="deco-ai-ring deco-ai-ring--2"></div>
+                      <div class="deco-ai-core"><el-icon size="28" color="#fff"><Cpu /></el-icon></div>
+                      <div class="deco-ai-node" v-for="n in 6" :key="n" :class="'node-'+n"></div>
+                    </div>
+                  </template>
+                  <template v-else-if="f.decoType === 'score'">
+                    <div class="deco-score">
+                      <div class="deco-score-card">
+                        <div class="dsc-label">最终得分</div>
+                        <div class="dsc-num" :style="{ color: f.accent }">96</div>
+                        <div class="dsc-bar-wrap">
+                          <div class="dsc-bar" v-for="v in [100,70,90,60,85]" :key="v" :style="{ height: v+'%', background: f.accent }"></div>
+                        </div>
+                        <div class="dsc-tag">超越 92% 的同学</div>
+                      </div>
+                    </div>
+                  </template>
+                  <template v-else-if="f.decoType === 'chart'">
+                    <div class="deco-chart">
+                      <div class="deco-chart-bar" v-for="(v,i) in [55,80,65,90,72,95]" :key="i"
+                        :style="{ height: v+'%', background: `hsl(${152+i*8},65%,${38+i*4}%)`, animationDelay: i*0.1+'s' }"
+                      ></div>
+                      <div class="deco-chart-line"></div>
+                    </div>
+                  </template>
+                </div>
+              </div>
             </div>
-            <h3 class="feature-title">{{ f.title }}</h3>
-            <p class="feature-desc">{{ f.desc }}</p>
+
+            <!-- 文字内容面板 -->
+            <div class="feature-content">
+              <div class="feature-eyebrow" :style="{ color: f.accent, background: f.bg }">
+                <el-icon :size="14"><component :is="f.icon" /></el-icon>
+                {{ f.subtitle }}
+              </div>
+              <h3 class="feature-title">{{ f.title }}</h3>
+              <p class="feature-desc">{{ f.desc }}</p>
+              <ul class="feature-points">
+                <li v-for="pt in f.points" :key="pt">
+                  <span class="fp-dot" :style="{ background: f.accent }"></span>
+                  {{ pt }}
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -113,10 +178,10 @@
             </div>
             <div class="exam-card-actions">
               <router-link :to="`/exams/${exam.id}`">
-                <el-button plain size="small" round>查看详情</el-button>
+                <el-button plain round>查看详情</el-button>
               </router-link>
               <router-link :to="`/exam/${exam.id}/room`">
-                <el-button type="primary" size="small" round>
+                <el-button type="primary" round>
                   <el-icon><VideoPlay /></el-icon>
                   立即作答
                 </el-button>
@@ -179,7 +244,7 @@
                 </span>
               </div>
               <router-link :to="`/books/${book.id}`" class="book-read-btn">
-                <el-button type="primary" size="small" round style="width:100%">
+                <el-button type="primary" round style="width:100%">
                   <el-icon><Reading /></el-icon>开始阅读
                 </el-button>
               </router-link>
@@ -224,14 +289,74 @@ const stats = [
   { num: '10,000+', label: '注册用户' },
   { num: '500+',    label: '在线考试' },
   { num: '98%',     label: '用户满意度' },
-  { num: '24/7',    label: '随时在线' },
+  { num: '7*24',    label: '随时在线' },
 ]
 
 const features = [
-  { icon: 'Reading',      title: '多题型支持',    desc: '支持单选、多选、判断、简答等多种题型，灵活组卷', color: '#1d4ed8' },
-  { icon: 'Cpu',          title: 'AI 智能评分',   desc: 'AI 辅助批改简答题，给出详细评分与评语，公正高效', color: '#7c3aed' },
-  { icon: 'Trophy',       title: '即时出分',       desc: '客观题提交后即时出分，成绩报告一目了然', color: '#d97706' },
-  { icon: 'DataAnalysis', title: '深度分析',       desc: '逐题分析答题情况，精准定位知识薄弱点', color: '#059669' },
+  {
+    icon: 'Reading',
+    decoType: 'qtype',
+    title: '多题型灵活组卷',
+    subtitle: '一套系统覆盖所有考试场景',
+    desc: '从客观题到主观题，全类型无缝覆盖。教师可自由选题、自定分值，学生答题体验流畅自然，系统自动完成客观题批改。',
+    points: [
+      '单选 · 多选 · 判断题，提交即自动批改',
+      '简答题支持 AI 辅助评分与详细评语',
+      '题库分类管理，按知识点快速检索',
+      '支持难度系数与知识点双维度标签',
+    ],
+    color: '#1d4ed8',
+    bg: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+    accent: '#3b82f6',
+  },
+  {
+    icon: 'Cpu',
+    decoType: 'ai',
+    title: 'AI 智能批改',
+    subtitle: '让大模型承担重复性批改工作',
+    desc: '基于大语言模型深度理解答题内容，为每道简答题给出精准评分与有据可查的评语，同时支持学生一键发起 AI 解析，彻底搞懂每道题。',
+    points: [
+      '毫秒级响应，批改速度远超人工',
+      '逐句分析答案，评语有理有据',
+      '多轮对话式 AI 答题解析',
+      '支持 OpenAI、DeepSeek 等主流模型',
+    ],
+    color: '#7c3aed',
+    bg: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
+    accent: '#8b5cf6',
+  },
+  {
+    icon: 'Trophy',
+    decoType: 'score',
+    title: '实时成绩反馈',
+    subtitle: '提交即知晓，不再漫长等待',
+    desc: '客观题作答完成后立即出分，简答题 AI 批改完成后自动推送完整成绩报告，每一分的来源都清晰可溯。',
+    points: [
+      '客观题提交后毫秒级出分',
+      '简答题 AI 评分完成自动通知',
+      '逐题得分详情与对比参考答案',
+      '历史成绩趋势图，一眼看出进步',
+    ],
+    color: '#d97706',
+    bg: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+    accent: '#f59e0b',
+  },
+  {
+    icon: 'DataAnalysis',
+    decoType: 'chart',
+    title: '深度学习分析',
+    subtitle: '数据驱动，精准找到薄弱点',
+    desc: '全方位记录每道题的答题情况，自动聚合分析知识点掌握程度，结合错题本与 AI 相似题推荐，帮助学生有针对性地强化练习。',
+    points: [
+      '按知识点维度聚合答题数据',
+      '自动收录错题，建立专属错题本',
+      'AI 推荐相似题目，针对性突破',
+      '学习进度可视化，进步看得见',
+    ],
+    color: '#059669',
+    bg: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+    accent: '#10b981',
+  },
 ]
 
 function statusLabel(s) {
@@ -393,7 +518,7 @@ onMounted(async () => {
 .hero-stats {
   display: flex;
   justify-content: center;
-  gap: 48px;
+  gap: 148px;
   flex-wrap: wrap;
   padding: 28px 0;
   border-top: 1px solid rgba(255,255,255,0.12);
@@ -422,65 +547,287 @@ onMounted(async () => {
 
 /* ── 特性区域 ─────────────────────────────────────────── */
 .features-section {
-  padding: 72px 0 56px;
+  padding: 96px 0 80px;
   background: #f8fafc;
+}
+.section-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #3b82f6;
+  background: #eff6ff;
+  padding: 4px 14px;
+  border-radius: 100px;
+  margin-bottom: 14px;
 }
 .section-title-group {
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: 72px;
 }
 .section-title {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 800;
   color: #0f172a;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   letter-spacing: -0.5px;
 }
 .section-subtitle {
   font-size: 16px;
   color: #64748b;
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.7;
 }
 
-.features-grid {
+/* ── 纵向特性列表 ──────────────────────────────────────── */
+.features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.feature-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 24px;
-}
-.feature-card {
-  background: #fff;
-  border-radius: 20px;
-  padding: 32px 26px;
-  border: 1px solid #f1f5f9;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-  transition: all 0.3s ease;
-  position: relative;
+  grid-template-columns: 1fr 1fr;
+  border-radius: 28px;
   overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.04);
+  min-height: 360px;
+  transition: box-shadow 0.3s, transform 0.3s;
 }
-.feature-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 36px rgba(0,0,0,0.08);
-  border-color: transparent;
+.feature-row:hover {
+  box-shadow: 0 16px 48px rgba(0,0,0,0.1);
+  transform: translateY(-4px);
 }
-.feature-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+.feature-row--reverse .feature-visual { order: 2; }
+.feature-row--reverse .feature-content { order: 1; }
+
+/* ── 视觉面板 ──────────────────────────────────────────── */
+.feature-visual {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
-  background: var(--icon-color);
+  padding: 48px 36px;
+  overflow: hidden;
 }
-.feature-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: #0f172a;
+.feature-visual::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(255,255,255,0.2) 0%, transparent 50%);
+  pointer-events: none;
+}
+.feature-visual-inner {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+.feature-big-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+.feature-seq {
+  position: absolute;
+  top: -8px;
+  right: -4px;
+  font-size: 72px;
+  font-weight: 900;
+  opacity: 0.08;
+  line-height: 1;
+  letter-spacing: -4px;
+  user-select: none;
+}
+
+/* ── 装饰：题型芯片 ────────────────────────────────────── */
+.deco-qtype {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  max-width: 220px;
+}
+.dq-chip {
+  padding: 8px 18px;
+  background: #fff;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--chip-c);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  border: 1.5px solid var(--chip-c);
+  white-space: nowrap;
+}
+
+/* ── 装饰：AI 神经网络 ─────────────────────────────────── */
+.deco-ai {
+  position: relative;
+  width: 140px;
+  height: 140px;
+}
+.deco-ai-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px dashed rgba(139,92,246,0.3);
+  animation: spin-slow linear infinite;
+}
+.deco-ai-ring--1 { inset: 0; animation-duration: 12s; }
+.deco-ai-ring--2 { inset: 16px; border-style: solid; opacity: 0.2; animation-duration: 8s; animation-direction: reverse; }
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.deco-ai-core {
+  position: absolute;
+  inset: 36px;
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+}
+.deco-ai-node {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #8b5cf6;
+  box-shadow: 0 2px 6px rgba(139,92,246,0.5);
+}
+.node-1 { top: 4px; left: 50%; transform: translateX(-50%); }
+.node-2 { bottom: 4px; left: 50%; transform: translateX(-50%); }
+.node-3 { left: 4px; top: 50%; transform: translateY(-50%); }
+.node-4 { right: 4px; top: 50%; transform: translateY(-50%); }
+.node-5 { top: 18px; right: 18px; width: 8px; height: 8px; opacity: 0.6; }
+.node-6 { bottom: 18px; left: 18px; width: 8px; height: 8px; opacity: 0.6; }
+
+/* ── 装饰：成绩卡 ──────────────────────────────────────── */
+.deco-score-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  min-width: 160px;
+  text-align: center;
+}
+.dsc-label { font-size: 11px; color: #94a3b8; font-weight: 600; letter-spacing: 1px; margin-bottom: 4px; }
+.dsc-num { font-size: 48px; font-weight: 900; line-height: 1; margin-bottom: 12px; }
+.dsc-bar-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 5px;
+  height: 40px;
   margin-bottom: 10px;
 }
+.dsc-bar {
+  width: 14px;
+  border-radius: 4px 4px 0 0;
+  opacity: 0.75;
+}
+.dsc-tag { font-size: 11px; color: #fff; background: #f59e0b; border-radius: 100px; padding: 3px 10px; display: inline-block; }
+
+/* ── 装饰：柱状图 ──────────────────────────────────────── */
+.deco-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 100px;
+  padding-bottom: 2px;
+  position: relative;
+}
+.deco-chart-bar {
+  flex: 1;
+  border-radius: 6px 6px 0 0;
+  min-width: 18px;
+  animation: bar-grow 0.8s ease backwards;
+}
+@keyframes bar-grow {
+  from { transform: scaleY(0); transform-origin: bottom; }
+  to   { transform: scaleY(1); transform-origin: bottom; }
+}
+.deco-chart-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(16,185,129,0.2);
+  border-radius: 1px;
+}
+
+/* ── 文字内容面板 ─────────────────────────────────────── */
+.feature-content {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 52px 52px 52px 48px;
+}
+.feature-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 5px 14px;
+  border-radius: 100px;
+  width: fit-content;
+  margin-bottom: 16px;
+}
+.feature-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 14px;
+  line-height: 1.3;
+  letter-spacing: -0.3px;
+}
 .feature-desc {
-  font-size: 14px;
+  font-size: 15px;
   color: #64748b;
-  line-height: 1.7;
+  line-height: 1.8;
+  margin-bottom: 28px;
+}
+.feature-points {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.feature-points li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #334155;
+  font-weight: 500;
+}
+.fp-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.feature-deco {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
 }
 
 /* ── 考试区域 ─────────────────────────────────────────── */
@@ -743,21 +1090,36 @@ onMounted(async () => {
 }
 
 /* ── 响应式 ───────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .feature-row {
+    grid-template-columns: 1fr;
+    min-height: unset;
+  }
+  .feature-row--reverse .feature-visual { order: 0; }
+  .feature-row--reverse .feature-content { order: 1; }
+  .feature-visual { min-height: 220px; padding: 40px 24px 36px; }
+  .feature-content { padding: 36px 32px; }
+  .feature-seq { font-size: 52px; }
+}
 @media (max-width: 768px) {
   .hero-title { font-size: 36px; }
   .hero-subtitle { font-size: 15px; }
   .hero-stats { gap: 28px; }
   .stat-num { font-size: 22px; }
-  .section-title { font-size: 24px; }
+  .section-title { font-size: 28px; }
   .cta-inner { flex-direction: column; text-align: center; }
   .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .features-list { gap: 20px; }
+  .feature-title { font-size: 22px; }
 }
 @media (max-width: 480px) {
   .hero { padding-top: 64px; }
   .hero-title { font-size: 28px; }
   .hero-btn-primary, .hero-btn-outline { height: 44px; padding: 0 24px; font-size: 15px; }
-  .features-grid { grid-template-columns: 1fr 1fr; }
   .exam-grid { grid-template-columns: 1fr; }
   .books-grid { grid-template-columns: 1fr 1fr; }
+  .feature-content { padding: 28px 24px; }
+  .feature-title { font-size: 20px; }
+  .feature-desc { font-size: 14px; }
 }
 </style>

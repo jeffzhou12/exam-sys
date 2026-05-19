@@ -72,6 +72,12 @@ const routes = [
         meta: { title: '消息管理', roles: ['SuperAdmin', 'Admin'] }
       },
       {
+        path: 'ai-configs',
+        name: 'AiConfigs',
+        component: () => import('@/views/ai-configs/AiConfigList.vue'),
+        meta: { title: 'AI 模型配置', roles: ['SuperAdmin', 'Admin'] }
+      },
+      {
         path: 'audit-logs',
         name: 'AuditLogs',
         component: () => import('@/views/audit-logs/AuditLogList.vue'),

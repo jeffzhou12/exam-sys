@@ -21,7 +21,8 @@ public record QuestionDto(
     string? KnowledgePoint,
     int Difficulty,
     bool IsAiGenerated,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    Guid? TenantId);
 
 public class GetQuestionsQueryHandler(
     IApplicationDbContext context,
@@ -55,7 +56,7 @@ public class GetQuestionsQueryHandler(
             .Take(query.PageSize)
             .Select(x => new QuestionDto(
                 x.Id, x.Type, x.Content, x.KnowledgePoint,
-                x.Difficulty, x.IsAiGenerated, x.CreatedAt))
+                x.Difficulty, x.IsAiGenerated, x.CreatedAt, x.TenantId))
             .ToListAsync(cancellationToken);
 
         var result = PaginatedResult<QuestionDto>.Create(items, query.Page, query.PageSize, totalCount);

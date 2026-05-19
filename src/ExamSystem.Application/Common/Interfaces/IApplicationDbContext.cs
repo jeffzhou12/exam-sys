@@ -12,6 +12,7 @@ public interface IApplicationDbContext
     DbSet<ExamQuestion> ExamQuestions { get; }
     DbSet<StudentAnswer> StudentAnswers { get; }
     DbSet<AiAuditLog> AiAuditLogs { get; }
+    DbSet<AiModelConfig> AiModelConfigs { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<Message> Messages { get; }
     DbSet<Book> Books { get; }

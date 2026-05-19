@@ -186,3 +186,29 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.HasIndex(a => new { a.EntityType, a.EntityId });
     }
 }
+
+public class AiModelConfigConfiguration : IEntityTypeConfiguration<AiModelConfig>
+{
+    public void Configure(EntityTypeBuilder<AiModelConfig> builder)
+    {
+        builder.ToTable("ai_model_configs");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.ProviderName).HasMaxLength(128).IsRequired();
+        builder.Property(c => c.BaseUrl).HasMaxLength(512).IsRequired();
+        builder.Property(c => c.ApiKey).HasMaxLength(512).IsRequired();
+        builder.Property(c => c.ChatModel).HasMaxLength(256).IsRequired();
+        builder.Property(c => c.EmbeddingModel).HasMaxLength(256);
+        builder.Property(c => c.Description).HasMaxLength(500);
+        builder.Property(c => c.Scene)
+            .HasConversion(v => v.ToString(), v => Enum.Parse<AiScene>(v))
+            .HasMaxLength(64);
+        // TenantId 可为 null（系统级配置），与 Tenant 存在软关联
+        builder.HasOne(c => c.Tenant)
+            .WithMany()
+            .HasForeignKey(c => c.TenantId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Cascade);
+        // 同一租户（或系统级）下同场景可设多个配置，以 Priority 区分
+        builder.HasIndex(c => new { c.TenantId, c.Scene, c.IsEnabled });
+    }
+}

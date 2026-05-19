@@ -62,6 +62,11 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column v-if="isAllTenantsMode" label="所属租户" width="120" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ tenantNameMap[row.tenantId] || row.tenantId?.slice(0, 8) || '—' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="createdAt" label="创建时间" width="180">
           <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
         </el-table-column>
@@ -91,6 +96,16 @@
       @closed="resetForm"
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
+        <el-form-item
+          v-if="isAllTenantsMode && !editingId"
+          label="所属租户"
+          prop="tenantId"
+          :rules="[{ required: true, message: '请选择所属租户', trigger: 'change' }]"
+        >
+          <el-select v-model="form.tenantId" placeholder="请选择归属租户（必选）" style="width: 100%">
+            <el-option v-for="t in allTenants" :key="t.id" :label="t.name" :value="t.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="题目类型" prop="type">
           <el-radio-group v-model="form.type">
             <el-radio :value="1">单选题</el-radio>
@@ -194,10 +209,32 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { questionsApi } from '@/api/questions'
+import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, MagicStick, Search, Refresh, Edit, Delete, Close, Check } from '@element-plus/icons-vue'
+
+const auth = useAuthStore()
+
+// 全租户模式：超级管理员且未选择具体租户
+const isAllTenantsMode = computed(() => auth.isSuperAdmin && !auth.activeTenantId)
+const allTenants = ref([])
+const tenantNameMap = computed(() =>
+  Object.fromEntries(allTenants.value.map(t => [t.id, t.name]))
+)
+
+function syncTenantsFromCache() {
+  try {
+    const raw = localStorage.getItem('admin.tenants.cache')
+    allTenants.value = raw ? JSON.parse(raw) : []
+  } catch { allTenants.value = [] }
+}
+
+function onTenantsUpdated(e) {
+  const list = e?.detail
+  allTenants.value = Array.isArray(list) ? list : []
+}
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -221,7 +258,8 @@ const form = reactive({
   correctAnswer: '',
   explanation: '',
   knowledgePoint: '',
-  difficulty: 1
+  difficulty: 1,
+  tenantId: null
 })
 
 const aiForm = reactive({ knowledgePoint: '', questionType: 1, count: 5 })
@@ -277,6 +315,7 @@ async function openDialog(row = null) {
     form.explanation = detail.explanation || ''
     form.knowledgePoint = detail.knowledgePoint || ''
     form.difficulty = detail.difficulty
+    form.tenantId = detail.tenantId || null
     // 解析选项
     if (detail.options) {
       try {
@@ -290,6 +329,8 @@ async function openDialog(row = null) {
     }
   } else {
     editingId.value = null
+    // 超级管理员已选中租户时预填
+    form.tenantId = auth.activeTenantId || null
   }
   dialogVisible.value = true
 }
@@ -303,6 +344,7 @@ function resetForm() {
   form.explanation = ''
   form.knowledgePoint = ''
   form.difficulty = 1
+  form.tenantId = null
   formRef.value?.resetFields()
 }
 
@@ -330,13 +372,19 @@ function buildPayload() {
 async function handleSubmit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
+  // 全租户模式新建时必须选租户
+  if (isAllTenantsMode.value && !editingId.value && !form.tenantId) {
+    ElMessage.warning('请选择所属租户')
+    return
+  }
   submitting.value = true
   try {
+    const tenantOverride = (isAllTenantsMode.value && !editingId.value) ? form.tenantId : null
     if (editingId.value) {
       await questionsApi.update(editingId.value, buildPayload())
       ElMessage.success('更新成功')
     } else {
-      await questionsApi.create(buildPayload())
+      await questionsApi.create(buildPayload(), tenantOverride)
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
@@ -376,7 +424,21 @@ function formatDate(val) {
   return new Date(val).toLocaleString('zh-CN')
 }
 
-onMounted(loadData)
+// 租户切换时刷新列表
+watch(() => auth.activeTenantId, () => {
+  query.page = 1
+  loadData()
+})
+
+onMounted(() => {
+  if (auth.isSuperAdmin) syncTenantsFromCache()
+  window.addEventListener('admin-tenants-updated', onTenantsUpdated)
+  loadData()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('admin-tenants-updated', onTenantsUpdated)
+})
 </script>
 
 <style scoped>

@@ -76,6 +76,14 @@ public static class DependencyInjection
         // 审计日志
         services.AddScoped<AuditLogs.GetAuditLogsQueryHandler>();
 
+        // AI 模型配置管理
+        services.AddScoped<AiConfigs.GetAiModelConfigsQueryHandler>();
+        services.AddScoped<AiConfigs.GetAiModelConfigByIdQueryHandler>();
+        services.AddScoped<AiConfigs.CreateAiModelConfigCommandHandler>();
+        services.AddScoped<AiConfigs.UpdateAiModelConfigCommandHandler>();
+        services.AddScoped<AiConfigs.DeleteAiModelConfigCommandHandler>();
+        services.AddScoped<AiConfigs.ResetAiModelConfigQuotaCommandHandler>();
+
         return services;
     }
 }

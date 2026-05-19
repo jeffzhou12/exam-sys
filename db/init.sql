@@ -23,6 +23,7 @@ DROP TABLE IF EXISTS student_answers   CASCADE;
 DROP TABLE IF EXISTS exam_questions    CASCADE;
 DROP TABLE IF EXISTS audit_logs        CASCADE;
 DROP TABLE IF EXISTS ai_audit_logs     CASCADE;
+DROP TABLE IF EXISTS ai_model_configs  CASCADE;
 DROP TABLE IF EXISTS exam_papers       CASCADE;
 DROP TABLE IF EXISTS questions         CASCADE;
 DROP TABLE IF EXISTS users             CASCADE;
@@ -301,7 +302,40 @@ CREATE INDEX IF NOT EXISTS idx_book_ann_user       ON book_annotations(user_id, 
 COMMENT ON TABLE  book_annotations               IS '图书标注表，每条记录对应一次书签、备注或 AI 问答';
 COMMENT ON COLUMN book_annotations.annotation_type IS '1=书签  2=阅读备注  3=AI问答';
 
+-- =============================================================================
+-- AI 模型配置表
+-- 支持超级管理员配置系统级默认模型，以及租户管理员配置本租户专属模型
+-- scene 枚举值（VARCHAR）：Default GenerateQuestions GradeAnswer ExplainQuestion AnalyzeBook Embedding
+-- =============================================================================
+CREATE TABLE ai_model_configs (
+    id                        UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id                 UUID         REFERENCES tenants(id) ON DELETE CASCADE,  -- NULL = 系统级配置
+    scene                     VARCHAR(64)  NOT NULL DEFAULT 'Default',                -- AiScene 枚举名称
+    provider_name             VARCHAR(128) NOT NULL,
+    base_url                  VARCHAR(512) NOT NULL,
+    api_key                   VARCHAR(512) NOT NULL,
+    chat_model                VARCHAR(256) NOT NULL,
+    embedding_model           VARCHAR(256),
+    max_tokens                INTEGER      NOT NULL DEFAULT 4096,
+    temperature               DOUBLE PRECISION NOT NULL DEFAULT 0.7,
+    monthly_quota_tokens      BIGINT,                                                 -- NULL = 不限额
+    used_tokens_current_month BIGINT       NOT NULL DEFAULT 0,
+    quota_reset_at            TIMESTAMPTZ,
+    is_enabled                BOOLEAN      NOT NULL DEFAULT TRUE,
+    priority                  INTEGER      NOT NULL DEFAULT 0,
+    description               VARCHAR(500),
+    created_at                TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at                TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
 
+CREATE INDEX IF NOT EXISTS idx_ai_model_configs_tenant_scene
+    ON ai_model_configs(tenant_id, scene, is_enabled);
+
+COMMENT ON TABLE  ai_model_configs                     IS 'AI 模型配置表，支持系统级与租户级按场景细粒度配置';
+COMMENT ON COLUMN ai_model_configs.tenant_id           IS 'NULL=系统级配置；非 NULL=租户专属配置，优先于系统级';
+COMMENT ON COLUMN ai_model_configs.scene               IS 'AiScene 枚举：Default/GenerateQuestions/GradeAnswer/ExplainQuestion/AnalyzeBook/Embedding';
+COMMENT ON COLUMN ai_model_configs.monthly_quota_tokens IS 'NULL 表示无限额；超出配额后该配置停止参与解析';
+COMMENT ON COLUMN ai_model_configs.priority            IS '同一 tenant+scene 下多条配置时，priority 越大越优先';
 
 -- =============================================================================
 -- 自动更新 updated_at 的触发器
@@ -318,7 +352,7 @@ DO $$
 DECLARE
     t TEXT;
 BEGIN
-    FOREACH t IN ARRAY ARRAY['tenants','users','questions','exam_papers','student_answers','ai_audit_logs','messages','books','book_annotations']
+    FOREACH t IN ARRAY ARRAY['tenants','users','questions','exam_papers','student_answers','ai_audit_logs','ai_model_configs','messages','books','book_annotations']
     LOOP
         EXECUTE format(
             'CREATE TRIGGER trg_%s_updated_at

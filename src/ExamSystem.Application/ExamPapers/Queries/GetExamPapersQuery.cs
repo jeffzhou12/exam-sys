@@ -22,7 +22,8 @@ public record ExamPaperDto(
     DateTime? EndTime,
     bool AntiCheatingEnabled,
     int QuestionCount,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    Guid? TenantId);
 
 public class GetExamPapersQueryHandler(IApplicationDbContext context)
 {
@@ -45,7 +46,7 @@ public class GetExamPapersQueryHandler(IApplicationDbContext context)
             .Select(e => new ExamPaperDto(
                 e.Id, e.Title, e.Description, e.TotalScore, e.DurationMinutes,
                 e.Status, e.StartTime, e.EndTime, e.AntiCheatingEnabled,
-                e.ExamQuestions.Count, e.CreatedAt))
+                e.ExamQuestions.Count, e.CreatedAt, e.TenantId))
             .ToListAsync(cancellationToken);
 
         return PaginatedResult<ExamPaperDto>.Create(items, query.Page, query.PageSize, totalCount);

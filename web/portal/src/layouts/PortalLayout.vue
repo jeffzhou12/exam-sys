@@ -213,6 +213,7 @@ async function loadTenants() {
 function handleTenantChange(id) {
   const tenant = tenants.value.find(t => t.id === id)
   auth.setActiveTenant(id || null, tenant?.name || '')
+  router.go(0)
 }
 
 // ── 实时登出检测（跨标签 localStorage 变化）───────────────────────

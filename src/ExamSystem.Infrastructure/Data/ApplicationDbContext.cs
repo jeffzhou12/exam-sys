@@ -14,6 +14,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ExamQuestion> ExamQuestions => Set<ExamQuestion>();
     public DbSet<StudentAnswer> StudentAnswers => Set<StudentAnswer>();
     public DbSet<AiAuditLog> AiAuditLogs => Set<AiAuditLog>();
+    public DbSet<AiModelConfig> AiModelConfigs => Set<AiModelConfig>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<Book> Books => Set<Book>();

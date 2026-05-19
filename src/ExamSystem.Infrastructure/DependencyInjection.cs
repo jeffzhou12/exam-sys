@@ -77,45 +77,8 @@ public static class DependencyInjection
         services.AddScoped<ForgotPasswordCommandHandler>();
         services.AddScoped<ResetPasswordCommandHandler>();
 
-        // ── AI 服务 ────────────────────────────────────────────────────────────
-        var aiOptions = new AiServiceOptions
-        {
-            PrimaryProvider = new AiProviderConfig
-            {
-                Name         = "DeepSeek",
-                BaseUrl      = configuration["AI:Primary:BaseUrl"]  ?? "https://api.deepseek.com/v1",
-                ApiKey       = configuration["AI:Primary:ApiKey"]   ?? string.Empty,
-                ChatModel    = configuration["AI:Primary:ChatModel"] ?? "deepseek-chat",
-                EmbeddingModel = "BAAI/bge-m3"   // DeepSeek 不提供 Embedding，此处备用
-            },
-            FallbackProvider = new AiProviderConfig
-            {
-                Name         = "SiliconFlow-DeepSeek",
-                BaseUrl      = configuration["AI:Fallback:BaseUrl"]  ?? "https://api.siliconflow.cn/v1",
-                ApiKey       = configuration["AI:Fallback:ApiKey"]   ?? string.Empty,
-                ChatModel    = configuration["AI:Fallback:ChatModel"] ?? "deepseek-ai/DeepSeek-V3",
-                EmbeddingModel = configuration["AI:Fallback:EmbeddingModel"] ?? "BAAI/bge-m3"
-            }
-        };
-
-        // 环境变量优先覆盖（ECS 生产环境注入）
-        var primaryKey  = Environment.GetEnvironmentVariable("AI__PRIMARY__APIKEY");
-        var fallbackKey = Environment.GetEnvironmentVariable("AI__FALLBACK__APIKEY");
-        if (!string.IsNullOrWhiteSpace(primaryKey))  aiOptions.PrimaryProvider.ApiKey  = primaryKey;
-        if (!string.IsNullOrWhiteSpace(fallbackKey)) aiOptions.FallbackProvider.ApiKey = fallbackKey;
-
-        // 备用 Provider ApiKey 为空时禁用 Fallback（避免无意义的二次调用）
-        if (string.IsNullOrWhiteSpace(aiOptions.FallbackProvider.ApiKey))
-            aiOptions.FallbackProvider = null;
-
-        services.AddSingleton(aiOptions);
-        services.AddHttpClient("AiService")
-            .AddStandardResilienceHandler(o =>
-            {
-                o.Retry.MaxRetryAttempts = 2;
-                o.Retry.Delay = TimeSpan.FromSeconds(1);
-                o.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(120);
-            });
+        // ── AI 服务（动态配置，由管理员通过 API 配置不同场景的模型）──────────────
+        services.AddScoped<IAiModelConfigService, AiModelConfigService>();
         services.AddScoped<IAiService, AiService>();
 
         // ── 文件存储（Provider 开关 + 模块级 Bucket 路由）────────────────────────

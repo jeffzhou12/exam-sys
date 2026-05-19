@@ -150,7 +150,10 @@ import { ref, reactive, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { auditLogsApi } from '@/api/auditLogs'
 import { tenantsApi } from '@/api/tenants'
+import { useAuthStore } from '@/stores/auth'
 import { Search, Refresh, View } from '@element-plus/icons-vue'
+
+const auth = useAuthStore()
 
 const logs = ref([])
 const total = ref(0)
@@ -172,6 +175,12 @@ const query = reactive({
 watch(dateRange, (val) => {
   query.from = val?.[0] || null
   query.to = val?.[1] ? val[1] + 'T23:59:59' : null
+})
+
+// 同步顶部租户切换器
+watch(() => auth.activeTenantId, (id) => {
+  query.tenantId = id || null
+  doSearch()
 })
 
 async function fetchLogs() {
@@ -246,6 +255,7 @@ function roleTagType(role) {
 }
 
 onMounted(async () => {
+  query.tenantId = auth.activeTenantId || null
   fetchLogs()
   try {
     const res = await tenantsApi.getList({ page: 1, pageSize: 200 })

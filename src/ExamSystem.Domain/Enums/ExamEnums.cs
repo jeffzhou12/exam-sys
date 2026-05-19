@@ -32,3 +32,14 @@ public enum UserRole
     Teacher = 1,     // 教师
     Student = 2      // 学生
 }
+
+/// <summary>AI 功能场景，用于针对不同业务模块配置不同的 AI 模型</summary>
+public enum AiScene
+{
+    Default = 0,           // 默认/通用场景（其他场景无配置时回退到此）
+    GenerateQuestions = 1, // AI 生成题目
+    GradeAnswer = 2,       // AI 批改/评分
+    ExplainQuestion = 3,   // AI 题目解析
+    AnalyzeBook = 4,       // AI 阅读辅助分析
+    Embedding = 5          // 向量嵌入（用于去重等）
+}

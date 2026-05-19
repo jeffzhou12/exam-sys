@@ -63,6 +63,11 @@
           </template>
         </el-table-column>
         <el-table-column label="上传者" prop="uploadedByName" min-width="80" />
+        <el-table-column v-if="isAllTenantsMode" label="所属租户" width="120" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ tenantNameMap[row.tenantId] || row.tenantId?.slice(0, 8) || '—' }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="320" fixed="right">
           <template #default="{ row }">
             <el-button type="success" size="small" :icon="View" @click="openPreview(row)">预览</el-button>
@@ -238,9 +243,12 @@
               </div>
             </el-form-item>
           </el-col>
-          <el-col :span="6">
+          <el-col :span="8">
             <el-form-item label="状态">
-              <el-switch v-model="formData.isActive" active-text="上架" inactive-text="下架" />
+              <el-radio-group v-model="formData.isActive">
+                <el-radio-button :value="true">上架</el-radio-button>
+                <el-radio-button :value="false">下架</el-radio-button>
+              </el-radio-group>
             </el-form-item>
           </el-col>
         </el-row>
@@ -384,7 +392,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { booksApi } from '@/api/books'
@@ -470,6 +478,9 @@ onBeforeUnmount(() => {
   window.removeEventListener('admin-tenants-updated', onTenantsUpdated)
 })
 
+// 租户切换时刷新列表
+watch(() => auth.activeTenantId, fetchBooks)
+
 // ============ 表单 Dialog ============
 const formDialog = reactive({ visible: false, isEdit: false, id: null, tenantId: null })
 const formRef = ref(null)
@@ -528,7 +539,7 @@ function removeTag(i) { formData.tagList.splice(i, 1) }
 function openCreateDialog() {
   formDialog.isEdit = false
   formDialog.id = null
-  formDialog.tenantId = null
+  formDialog.tenantId = auth.activeTenantId || null
   Object.assign(formData, defaultFormData())
   coverMode.value = 'url'
   clearCoverUpload()

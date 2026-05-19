@@ -33,6 +33,11 @@
     <el-card shadow="never" class="table-card">
       <el-table v-loading="loading" :data="tableData" stripe>
         <el-table-column prop="title" label="试卷标题" min-width="200" />
+        <el-table-column v-if="isAllTenantsMode" label="所属租户" width="130" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ tenantNameMap[row.tenantId] || row.tenantId?.slice(0, 8) || '—' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="totalScore" label="总分" width="80" />
         <el-table-column prop="durationMinutes" label="时长(分)" width="90" />
         <el-table-column prop="questionCount" label="题目数" width="80" />
@@ -138,13 +143,32 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { examPapersApi } from '@/api/examPapers'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Loading, Search, Refresh, Edit, Promotion, CircleClose, DataLine, View } from '@element-plus/icons-vue'
 
 const auth = useAuthStore()
+
+// 全租户模式：超级管理员且未选择具体租户
+const isAllTenantsMode = computed(() => auth.isSuperAdmin && !auth.activeTenantId)
+const allTenants = ref([])
+const tenantNameMap = computed(() =>
+  Object.fromEntries(allTenants.value.map(t => [t.id, t.name]))
+)
+
+function syncTenantsFromCache() {
+  try {
+    const raw = localStorage.getItem('admin.tenants.cache')
+    allTenants.value = raw ? JSON.parse(raw) : []
+  } catch { allTenants.value = [] }
+}
+
+function onTenantsUpdated(e) {
+  const list = e?.detail
+  allTenants.value = Array.isArray(list) ? list : []
+}
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
@@ -211,7 +235,21 @@ async function openPreview(row) {
   }
 }
 
-onMounted(loadData)
+// 租户切换时刷新列表
+watch(() => auth.activeTenantId, () => {
+  query.page = 1
+  loadData()
+})
+
+onMounted(() => {
+  if (auth.isSuperAdmin) syncTenantsFromCache()
+  window.addEventListener('admin-tenants-updated', onTenantsUpdated)
+  loadData()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('admin-tenants-updated', onTenantsUpdated)
+})
 </script>
 
 <style scoped>

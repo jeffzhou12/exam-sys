@@ -149,8 +149,8 @@ public class GetTenantTeachersQueryHandler(IApplicationDbContext context)
             .Where(u => u.TenantId == tenantId
                 && u.Role == UserRole.Teacher
                 && u.IsActive)
-            .Select(u => new TeacherDto(u.Id, u.Username))
             .OrderBy(u => u.Username)
+            .Select(u => new TeacherDto(u.Id, u.Username))
             .ToListAsync(cancellationToken);
     }
 }

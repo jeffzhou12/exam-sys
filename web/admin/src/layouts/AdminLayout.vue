@@ -50,6 +50,11 @@
           <template #title>消息管理</template>
         </el-menu-item>
 
+        <el-menu-item v-if="auth.isAnyAdmin" index="/ai-configs">
+          <el-icon><Setting /></el-icon>
+          <template #title>AI 模型配置</template>
+        </el-menu-item>
+
         <el-menu-item v-if="auth.isSuperAdmin" index="/audit-logs">
           <el-icon><Notebook /></el-icon>
           <template #title>审计日志</template>
@@ -133,7 +138,7 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import {
   DataBoard, OfficeBuilding, User, Document, QuestionFilled,
   Expand, Fold, UserFilled, SwitchButton, School, Reading,
-  ChatDotRound, Notebook
+  ChatDotRound, Notebook, Setting
 } from '@element-plus/icons-vue'
 
 const auth = useAuthStore()

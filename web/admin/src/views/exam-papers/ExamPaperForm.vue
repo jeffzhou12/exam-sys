@@ -16,6 +16,24 @@
     >
       <el-card shadow="never" class="form-card">
         <template #header><span>基本信息</span></template>
+        <!-- 超级管理员全租户模式：必须选择归属租户 -->
+        <el-row v-if="auth.isSuperAdmin && isAllTenantsMode && !isEdit" :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="所属租户" required>
+              <el-select v-model="formTenantId" placeholder="请选择归属租户（必选）" style="width: 100%">
+                <el-option v-for="t in allTenants" :key="t.id" :label="t.name" :value="t.id" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <!-- 超级管理员已选中租户时：显示当前租户提示 -->
+        <el-row v-else-if="auth.isSuperAdmin && auth.activeTenantId" :gutter="20">
+          <el-col :span="24">
+            <el-form-item label="所属租户">
+              <el-tag type="primary">{{ auth.activeTenantName || auth.activeTenantId }}</el-tag>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="试卷标题" prop="title">
@@ -409,12 +427,26 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { examPapersApi } from '@/api/examPapers'
 import { questionsApi } from '@/api/questions'
+import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import { Plus, Delete, ArrowLeft, MagicStick, Reading } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const isEdit = computed(() => !!route.params.id)
+const isAllTenantsMode = computed(() => auth.isSuperAdmin && !auth.activeTenantId)
+
+// 超级管理员全租户模式下，在表单内选择归属租户
+const formTenantId = ref(null)
+const allTenants = ref([])
+
+function syncTenantsFromCache() {
+  try {
+    const raw = localStorage.getItem('admin.tenants.cache')
+    allTenants.value = raw ? JSON.parse(raw) : []
+  } catch { allTenants.value = [] }
+}
 const pageLoading = ref(false)
 const submitting = ref(false)
 const formRef = ref(null)
@@ -488,6 +520,11 @@ function removeQuestion(index) {
 async function handleSubmit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
+  // 全租户模式新建时必须选择归属租户
+  if (isAllTenantsMode.value && !isEdit.value && !formTenantId.value) {
+    ElMessage.warning('请先选择试卷所属租户')
+    return
+  }
   submitting.value = true
   try {
     const payload = {
@@ -504,11 +541,12 @@ async function handleSubmit() {
         order: i + 1
       }))
     }
+    const tenantOverride = (isAllTenantsMode.value && !isEdit.value) ? formTenantId.value : null
     if (isEdit.value) {
-      await examPapersApi.update(route.params.id, payload)
+      await examPapersApi.update(route.params.id, payload, tenantOverride)
       ElMessage.success('保存成功')
     } else {
-      await examPapersApi.create(payload)
+      await examPapersApi.create(payload, tenantOverride)
       ElMessage.success('创建成功')
     }
     router.push('/exam-papers')
@@ -717,6 +755,10 @@ async function loadDetail() {
 }
 
 onMounted(() => {
+  if (auth.isSuperAdmin) {
+    syncTenantsFromCache()
+    formTenantId.value = auth.activeTenantId || null
+  }
   loadDetail()
   loadPickerQuestions()
 })
