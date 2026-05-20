@@ -71,13 +71,13 @@
               v-model="answers[currentQuestion.questionId]"
               class="option-group">
               <el-radio
-                v-for="(opt, i) in (currentQuestion.options || [])"
+                v-for="(opt, i) in parsedOptions(currentQuestion)"
                 :key="i"
-                :value="opt"
+                :value="optLabel(i).replace('. ', '')"
                 class="option-item">
                 <span class="option-label">{{ optLabel(i) }}</span>{{ opt }}
               </el-radio>
-              <el-radio v-if="!currentQuestion.options?.length" value="" disabled>
+              <el-radio v-if="!parsedOptions(currentQuestion).length" value="" disabled>
                 （题目无选项，请联系教师）
               </el-radio>
             </el-radio-group>
@@ -88,9 +88,9 @@
               v-model="mcAnswers[currentQuestion.questionId]"
               class="option-group">
               <el-checkbox
-                v-for="(opt, i) in (currentQuestion.options || [])"
+                v-for="(opt, i) in parsedOptions(currentQuestion)"
                 :key="i"
-                :value="opt"
+                :value="optLabel(i).replace('. ', '')"
                 class="option-item">
                 <span class="option-label">{{ optLabel(i) }}</span>{{ opt }}
               </el-checkbox>
@@ -184,6 +184,14 @@ function typeLabel(t) {
 }
 function optLabel(i) {
   return String.fromCharCode(65 + i) + '. '
+}
+function parsedOptions(q) {
+  if (!q?.options) return []
+  try {
+    const raw = typeof q.options === 'string' ? JSON.parse(q.options) : q.options
+    if (Array.isArray(raw)) return raw
+    return Object.values(raw)
+  } catch { return [] }
 }
 function formatTime(s) {
   const h = Math.floor(s / 3600)
@@ -489,6 +497,20 @@ onUnmounted(() => {
 .option-item:hover {
   background: #f8fafc;
   border-color: #93c5fd;
+}
+/* 选项居左对齐 */
+.option-group :deep(.el-radio),
+.option-group :deep(.el-checkbox) {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  margin-right: 0;
+}
+.option-group :deep(.el-radio__label),
+.option-group :deep(.el-checkbox__label) {
+  white-space: normal;
+  line-height: 1.6;
+  text-align: left;
 }
 .option-label {
   font-weight: 600;

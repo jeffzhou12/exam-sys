@@ -83,7 +83,7 @@
         <!-- 该题相似推荐 -->
         <SimilarQuestions
           v-if="!item.isCorrect && item.knowledgePoint"
-          :question="item"
+          :question="{ id: item.questionId, knowledgePoint: item.knowledgePoint, difficulty: item.difficulty }"
           :current-ids="result.items.map(x => x.questionId)"
           @add-to-practice="addWrongToPractice"
         />
@@ -130,16 +130,20 @@ const wrongItems = computed(() =>
 )
 
 // ─── 错题本（localStorage）─────────────────────────────────────────────────
+// 用响应式 Set 追踪已在错题本中的 questionId，确保按钮即时更新
+const wrongBookIds = ref(new Set())
+
 function loadWrongBook() {
   try { return JSON.parse(localStorage.getItem('wrong-book') || '[]') } catch { return [] }
 }
 
 function saveWrongBook(book) {
   localStorage.setItem('wrong-book', JSON.stringify(book))
+  wrongBookIds.value = new Set(book.map(x => x.questionId))
 }
 
 function inWrongBook(questionId) {
-  return loadWrongBook().some(x => x.questionId === questionId)
+  return wrongBookIds.value.has(questionId)
 }
 
 function toggleWrongBook(item) {
@@ -213,6 +217,8 @@ onMounted(() => {
     const raw = sessionStorage.getItem('practice-result')
     if (raw) result.value = JSON.parse(raw)
   } catch { result.value = null }
+  // 初始化错题本响应式 ID 集合
+  wrongBookIds.value = new Set(loadWrongBook().map(x => x.questionId))
 })
 </script>
 
@@ -277,6 +283,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-bottom: 20px;
 }
 
 .result-item.wrong {

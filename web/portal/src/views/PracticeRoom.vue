@@ -105,6 +105,37 @@
             class="short-answer-input"
           />
 
+          <!-- 辅助功能栏 -->
+          <div class="question-helps">
+            <el-button size="small" plain round @click="toggleAnswer">
+              <el-icon><QuestionFilled /></el-icon>
+              {{ answerShown ? '收起答案' : '查看参考答案' }}
+            </el-button>
+            <el-button size="small" plain round @click="msgVisible = true">
+              <el-icon><ChatDotRound /></el-icon>
+              求助教师
+            </el-button>
+            <el-button size="small" plain round @click="openAiExplain">
+              <el-icon><MagicStick /></el-icon>
+              AI 分析
+            </el-button>
+          </div>
+
+          <!-- 参考答案面板 -->
+          <div v-if="answerShown" class="answer-panel">
+            <div v-if="answerLoading" class="answer-loading">加载中…</div>
+            <template v-else-if="currentAnswer">
+              <div class="answer-row">
+                <span class="answer-label">参考答案：</span>
+                <span class="answer-value">{{ currentAnswer.correctAnswer }}</span>
+              </div>
+              <div v-if="currentAnswer.explanation" class="answer-explanation">
+                <span class="answer-label">解析：</span>{{ currentAnswer.explanation }}
+              </div>
+            </template>
+            <div v-else class="answer-loading">暂无答案信息</div>
+          </div>
+
           <!-- 题目操作 -->
           <div class="question-actions">
             <el-button
@@ -140,18 +171,25 @@
     </div>
 
     <!-- AI 悬浮解析按钮 -->
-    <AiExplain v-if="currentQ" :question-id="currentQ.id" />
+    <AiExplain ref="aiExplainRef" v-if="currentQ" :question-id="currentQ.id" />
+
+    <!-- 求助教师对话框 -->
+    <SendMessageDialog
+      v-model:visible="msgVisible"
+      :attached-questions="currentQ ? [currentQ] : []"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, ArrowRight, Loading } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight, Loading, QuestionFilled, ChatDotRound, MagicStick } from '@element-plus/icons-vue'
 import { practiceApi } from '@/api/practice'
 import SimilarQuestions from '@/components/SimilarQuestions.vue'
 import AiExplain from '@/components/AiExplain.vue'
+import SendMessageDialog from '@/components/SendMessageDialog.vue'
 
 const router = useRouter()
 const questions = ref([])
@@ -166,6 +204,45 @@ const answeredCount = computed(() =>
     q.type === 2 ? (multiAnswers[q.id]?.length > 0) : !!answers[q.id]
   ).length
 )
+
+// ── 参考答案 & 辅助功能 ─────────────────────────────────────────────────────
+const aiExplainRef = ref(null)
+const answerShown = ref(false)
+const answerLoading = ref(false)
+const currentAnswer = ref(null)
+const answerCache = reactive({})
+const msgVisible = ref(false)
+
+watch(currentIdx, () => {
+  answerShown.value = false
+  const id = currentQ.value?.id
+  currentAnswer.value = id != null ? (answerCache[id] ?? null) : null
+})
+
+async function toggleAnswer() {
+  if (!answerShown.value) {
+    answerShown.value = true
+    const id = currentQ.value?.id
+    if (id && !(id in answerCache)) {
+      answerLoading.value = true
+      try {
+        answerCache[id] = await practiceApi.getAnswer(id)
+      } catch {
+        ElMessage.error('获取答案失败')
+        answerCache[id] = null
+      } finally {
+        answerLoading.value = false
+      }
+    }
+    currentAnswer.value = id != null ? (answerCache[id] ?? null) : null
+  } else {
+    answerShown.value = false
+  }
+}
+
+function openAiExplain() {
+  aiExplainRef.value?.open()
+}
 
 const typeMap = { 1: '单选题', 2: '多选题', 3: '判断题', 4: '简答题' }
 const typeLabel = (t) => typeMap[t] ?? '未知'
@@ -237,15 +314,35 @@ async function submitPractice() {
 
     // 记录练习历史
     const setup = JSON.parse(sessionStorage.getItem('practice-setup') || '{}')
+    const setupParams = JSON.parse(sessionStorage.getItem('practice-setup-params') || '{}')
     const history = JSON.parse(localStorage.getItem('practice-history') || '[]')
     history.unshift({
       count: result.items.length,
       correctRate: result.maxScore > 0 ? result.totalScore / result.maxScore : 0,
+      correctCount: result.correctCount ?? null,
+      totalScore: result.totalScore ?? null,
+      maxScore: result.maxScore ?? null,
       typeName: setup.typeName,
       knowledgePoint: setup.knowledgePoint,
+      type: setupParams.type ?? null,
+      difficulty: setupParams.difficulty ?? null,
+      setupCount: setupParams.count ?? 10,
       time: new Date().toISOString(),
     })
     localStorage.setItem('practice-history', JSON.stringify(history.slice(0, 20)))
+
+    // 同步保存到服务端（失败不阻断流程）
+    practiceApi.saveSession({
+      count:          result.items.length,
+      correctCount:   result.correctCount ?? 0,
+      totalScore:     result.totalScore   ?? 0,
+      maxScore:       result.maxScore     ?? 0,
+      typeName:       setup.typeName      ?? null,
+      knowledgePoint: setup.knowledgePoint ?? null,
+      questionType:   setupParams.type    ?? null,
+      difficulty:     setupParams.difficulty ?? null,
+      setupCount:     setupParams.count   ?? 10,
+    }).catch(() => { /* 网络失败时静默忽略，本地记录仍有效 */ })
 
     router.push('/practice/result')
   } finally {
@@ -438,6 +535,20 @@ onMounted(() => {
   border-color: #93c5fd;
   background: #f0f9ff;
 }
+/* 选项居左对齐 */
+.options-group :deep(.el-radio),
+.options-group :deep(.el-checkbox) {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  margin-right: 0;
+}
+.options-group :deep(.el-radio__label),
+.options-group :deep(.el-checkbox__label) {
+  white-space: normal;
+  line-height: 1.6;
+  text-align: left;
+}
 
 .option-key {
   font-weight: 600;
@@ -456,5 +567,42 @@ onMounted(() => {
   margin-top: 8px;
   padding-top: 16px;
   border-top: 1px solid #f1f5f9;
+}
+.question-helps {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed #e2e8f0;
+}
+.answer-panel {
+  margin-top: 12px;
+  padding: 14px 18px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.answer-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.answer-label {
+  font-weight: 600;
+  color: #15803d;
+  white-space: nowrap;
+}
+.answer-value {
+  color: #1e293b;
+}
+.answer-explanation {
+  color: #475569;
+}
+.answer-loading {
+  color: #94a3b8;
+  font-size: 13px;
 }
 </style>

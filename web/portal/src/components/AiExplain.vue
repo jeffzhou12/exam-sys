@@ -85,6 +85,8 @@ function open() {
   visible.value = true
   if (!content.value && !loading.value) fetchExplanation()
 }
+
+defineExpose({ open })
 </script>
 
 <style scoped>

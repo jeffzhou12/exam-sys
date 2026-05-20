@@ -246,7 +246,8 @@ public class SendMessageRequestValidator : AbstractValidator<SendMessageRequest>
     public SendMessageRequestValidator()
     {
         RuleFor(x => x.RecipientId)
-            .NotEmpty().WithMessage("收件人 ID 不能为空。");
+            .NotEmpty().WithMessage("收件人 ID 不能为空。")
+            .When(x => !x.ParentMessageId.HasValue);  // 回复时由服务端推断收件人
 
         RuleFor(x => x.Subject)
             .NotEmpty().WithMessage("主题不能为空。")

@@ -17,9 +17,9 @@
         </p>
         <div class="hero-actions">
           <router-link to="/exams">
-            <el-button type="primary" size="large" class="hero-btn-primary">
+            <el-button type="primary" size="large"  class="hero-btn-outline">
               <el-icon><Promotion /></el-icon>
-              立即参加考试
+              参加考试
             </el-button>
           </router-link>
           <router-link v-if="!auth.isLoggedIn" to="/register">

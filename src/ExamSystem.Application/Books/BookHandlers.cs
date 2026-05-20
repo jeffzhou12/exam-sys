@@ -3,6 +3,7 @@ using ExamSystem.Application.Common.Models;
 using ExamSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using PDFtoImage;
+using SkiaSharp;
 using System.Text.Json;
 
 namespace ExamSystem.Application.Books;
@@ -309,15 +310,30 @@ public class UploadBookPdfCommandHandler(IApplicationDbContext db, IFileStorageF
                 await pdfStream.CopyToAsync(buffered, ct);
                 buffered.Position = 0;
 
-                // 渲染首页为 JPEG（150 DPI 足够封面质量）
-                using var jpegStream = new MemoryStream();
-                Conversion.SaveJpeg(jpegStream, buffered,
-                    options: new RenderOptions(Dpi: 150));
-                jpegStream.Position = 0;
+                // 渲染 PDF 首页为 JPEG（96 DPI 足够封面用途）
+                using var rawJpeg = new MemoryStream();
+                Conversion.SaveJpeg(rawJpeg, buffered,
+                    options: new RenderOptions(Dpi: 96));
+                rawJpeg.Position = 0;
+
+                // 缩放为缩略图（最大宽度 320px），压缩 JPEG 质量
+                using var thumbStream = new MemoryStream();
+                using (var srcBitmap = SKBitmap.Decode(rawJpeg))
+                {
+                    const int maxW = 320;
+                    int tW = Math.Min(srcBitmap.Width, maxW);
+                    int tH = (int)((long)srcBitmap.Height * tW / srcBitmap.Width);
+                    using var resized = srcBitmap.Resize(
+                        new SKImageInfo(tW, tH), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
+                    using var img = SKImage.FromBitmap(resized);
+                    using var encoded = img.Encode(SKEncodedImageFormat.Jpeg, 85);
+                    encoded.SaveTo(thumbStream);
+                }
+                thumbStream.Position = 0;
 
                 // 保存封面并写入 URL
                 var coverKey = await mediaStorage.SaveAsync(
-                    jpegStream, $"cover-{cmd.Id}.jpg", "covers", ct);
+                    thumbStream, $"cover-{cmd.Id}.jpg", "covers", ct);
                 book.CoverImageUrl =
                     $"{cmd.MediaBaseUrl}/api/media/image/{Uri.EscapeDataString(coverKey)}";
             }

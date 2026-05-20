@@ -115,8 +115,11 @@ public class MessageConfiguration : IEntityTypeConfiguration<Message>
         // AttachedQuestionIds 存储为 JSONB（题目 UUID 数组）
         builder.Property(m => m.AttachedQuestionIds).HasColumnType("jsonb");
         builder.HasIndex(m => new { m.RecipientId, m.IsRead });
-        builder.HasIndex(m => m.SenderId);
-    }
+        builder.HasIndex(m => m.SenderId);        // ParentMessageId 自引用 FK
+        builder.HasOne<Message>().WithMany()
+            .HasForeignKey(m => m.ParentMessageId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);    }
 }
 
 public class BookConfiguration : IEntityTypeConfiguration<Book>
@@ -210,5 +213,18 @@ public class AiModelConfigConfiguration : IEntityTypeConfiguration<AiModelConfig
             .OnDelete(DeleteBehavior.Cascade);
         // 同一租户（或系统级）下同场景可设多个配置，以 Priority 区分
         builder.HasIndex(c => new { c.TenantId, c.Scene, c.IsEnabled });
+    }
+}
+
+public class PracticeSessionConfiguration : IEntityTypeConfiguration<PracticeSession>
+{
+    public void Configure(EntityTypeBuilder<PracticeSession> builder)
+    {
+        builder.ToTable("practice_sessions");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.StudentId).HasMaxLength(100).IsRequired();
+        builder.Property(p => p.TypeName).HasMaxLength(50);
+        builder.Property(p => p.KnowledgePoint).HasMaxLength(200);
+        builder.HasIndex(p => new { p.TenantId, p.StudentId, p.CreatedAt });
     }
 }

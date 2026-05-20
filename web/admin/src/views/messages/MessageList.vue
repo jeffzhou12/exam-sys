@@ -2,13 +2,7 @@
   <div class="messages-page">
     <el-card shadow="never">
       <div class="toolbar">
-        <el-radio-group v-model="activeTab" @change="handleTabChange">
-          <el-radio-button value="inbox">
-            收件箱
-            <el-badge v-if="unreadCount > 0" :value="unreadCount" :max="99" class="tab-badge" />
-          </el-radio-button>
-          <el-radio-button value="sent">已发送</el-radio-button>
-        </el-radio-group>
+        <span class="toolbar-title">全部消息</span>
         <el-button type="primary" :icon="Plus" @click="openCompose">发送消息</el-button>
       </div>
 
@@ -20,8 +14,8 @@
         @row-click="openDetail"
         :row-class-name="rowClass"
       >
-        <el-table-column v-if="activeTab === 'inbox'" label="发件人" prop="senderName" width="120" />
-        <el-table-column v-else label="收件人" prop="recipientName" width="120" />
+        <el-table-column label="发件人" prop="senderName" width="120" />
+        <el-table-column label="收件人" prop="recipientName" width="120" />
         <el-table-column label="主题" min-width="200">
           <template #default="{ row }">
             <span :class="{ 'unread-subject': activeTab === 'inbox' && !row.isRead }">
@@ -34,7 +28,7 @@
             <span class="body-preview text-muted">{{ row.body }}</span>
           </template>
         </el-table-column>
-        <el-table-column v-if="activeTab === 'inbox'" label="状态" width="80" align="center">
+        <el-table-column label="状态" width="80" align="center">
           <template #default="{ row }">
             <el-tag :type="row.isRead ? 'info' : 'primary'" size="small">
               {{ row.isRead ? '已读' : '未读' }}
@@ -82,17 +76,35 @@
           <div v-if="detailMsg.attachedExamPaperId">
             <el-tag type="primary" size="small" :icon="Document">试卷 {{ detailMsg.attachedExamPaperId }}</el-tag>
           </div>
-          <div v-if="detailMsg.attachedQuestionIds?.length" style="margin-top:6px">
-            <el-tag
-              v-for="qid in detailMsg.attachedQuestionIds"
-              :key="qid"
-              size="small"
-              type="success"
-              style="margin:2px"
-            >题目 {{ qid }}</el-tag>
+          <div v-if="detailMsg.attachedQuestionIds?.length" style="margin-top:16px">
+            <el-divider content-position="left">关联题目</el-divider>
+            <div v-loading="questionsLoading" class="question-list">
+              <div
+                v-for="qid in detailMsg.attachedQuestionIds"
+                :key="qid"
+                class="question-card"
+              >
+                <template v-if="questionDetails[qid]">
+                  <div class="q-meta">
+                    <el-tag size="small" :type="qTypeTag(questionDetails[qid].questionType)">{{ qTypeLabel(questionDetails[qid].questionType) }}</el-tag>
+                    <el-tag size="small" type="info" effect="plain">难度 {{ questionDetails[qid].difficulty }}</el-tag>
+                    <span v-if="questionDetails[qid].knowledgePoint" class="knowledge-point">{{ questionDetails[qid].knowledgePoint }}</span>
+                    <el-button
+                      size="small"
+                      type="primary"
+                      link
+                      style="margin-left:auto"
+                      @click="router.push({ name: 'Questions' })"
+                    >前往题库 →</el-button>
+                  </div>
+                  <div class="q-content">{{ questionDetails[qid].content }}</div>
+                </template>
+                <span v-else class="text-muted">题目加载中...</span>
+              </div>
+            </div>
           </div>
         </div>
-        <div v-if="activeTab === 'inbox' && !detailMsg.isRead" style="margin-top:16px">
+        <div v-if="!detailMsg.isRead" style="margin-top:16px">
           <el-button type="primary" :icon="Check" @click="markRead(detailMsg)">标为已读</el-button>
         </div>
       </template>
@@ -154,25 +166,24 @@
 <script setup>
 import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { messagesApi } from '@/api/messages'
 import { Plus, View, Check, Promotion, Document } from '@element-plus/icons-vue'
 
 const auth = useAuthStore()
+const router = useRouter()
 
-const activeTab = ref('inbox')
 const messages = ref([])
 const total = ref(0)
 const loading = ref(false)
-const unreadCount = ref(0)
 
 const query = reactive({ page: 1, pageSize: 10 })
 
 async function fetchMessages() {
   loading.value = true
   try {
-    const fn = activeTab.value === 'inbox' ? messagesApi.getInbox : messagesApi.getSent
-    const res = await fn({ page: query.page, pageSize: query.pageSize })
+    const res = await messagesApi.getAll({ page: query.page, pageSize: query.pageSize })
     // API 当前返回数组，兼容带 totalCount 的对象
     if (Array.isArray(res)) {
       messages.value = res
@@ -181,9 +192,6 @@ async function fetchMessages() {
       messages.value = res.items || res
       total.value = res.totalCount ?? messages.value.length
     }
-    if (activeTab.value === 'inbox') {
-      unreadCount.value = messages.value.filter(m => !m.isRead).length
-    }
   } catch {
     ElMessage.error('加载失败')
   } finally {
@@ -191,24 +199,30 @@ async function fetchMessages() {
   }
 }
 
-function handleTabChange() {
-  query.page = 1
-  fetchMessages()
-}
-
 function rowClass({ row }) {
-  return activeTab.value === 'inbox' && !row.isRead ? 'row-unread' : ''
+  return !row.isRead ? 'row-unread' : ''
 }
 
 // ── 详情 ──────────────────────────────────────────────
 const detailVisible = ref(false)
 const detailMsg = ref(null)
+const questionDetails = ref({})
+const questionsLoading = ref(false)
 
 function openDetail(row) {
   detailMsg.value = row
   detailVisible.value = true
-  if (activeTab.value === 'inbox' && !row.isRead) {
-    markRead(row, false)
+  questionDetails.value = {}
+  if (row.attachedQuestionIds?.length) {
+    questionsLoading.value = true
+    messagesApi.getMessageQuestions(row.id)
+      .then(qs => {
+        const map = {}
+        qs?.forEach(q => { map[q.id] = q })
+        questionDetails.value = map
+      })
+      .catch(() => {})
+      .finally(() => { questionsLoading.value = false })
   }
 }
 
@@ -216,7 +230,6 @@ async function markRead(msg, showMsg = true) {
   try {
     await messagesApi.markRead(msg.id)
     msg.isRead = true
-    unreadCount.value = Math.max(0, unreadCount.value - 1)
     if (showMsg) ElMessage.success('已标为已读')
   } catch {
     if (showMsg) ElMessage.error('操作失败')
@@ -300,7 +313,7 @@ async function submitCompose() {
     await messagesApi.send(payload)
     ElMessage.success('发送成功')
     composeVisible.value = false
-    if (activeTab.value === 'sent') fetchMessages()
+    fetchMessages()
   } catch (e) {
     ElMessage.error(e?.message || '发送失败')
   } finally {
@@ -314,6 +327,12 @@ function formatTime(iso) {
   const d = new Date(iso)
   return d.toLocaleString('zh-CN', { hour12: false })
 }
+
+// ── 题目类型 ──────────────────────────────────────────
+const Q_TYPE_LABELS = { SingleChoice: '单选题', MultipleChoice: '多选题', TrueFalse: '判断题', ShortAnswer: '简答题' }
+const Q_TYPE_TAGS   = { SingleChoice: '', MultipleChoice: 'warning', TrueFalse: 'success', ShortAnswer: 'info' }
+const qTypeLabel = (t) => Q_TYPE_LABELS[t] ?? t
+const qTypeTag   = (t) => Q_TYPE_TAGS[t] ?? ''
 
 onMounted(async () => {
   fetchMessages()
@@ -332,9 +351,10 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
 }
-.tab-badge {
-  margin-left: 4px;
-  vertical-align: middle;
+.toolbar-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
 }
 .unread-subject {
   font-weight: 600;
@@ -363,6 +383,16 @@ onBeforeUnmount(() => {
   min-height: 80px;
 }
 .attachments { margin-top: 16px; }
+.question-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.question-card {
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #f0f7ff;
+}
+.q-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.knowledge-point { font-size: 12px; color: #1d4ed8; background: #dbeafe; padding: 2px 8px; border-radius: 10px; }
+.q-content { font-size: 14px; color: #1e293b; line-height: 1.6; }
 :deep(.row-unread td) {
   background-color: #f0f7ff !important;
 }

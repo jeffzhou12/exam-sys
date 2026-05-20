@@ -54,8 +54,10 @@
           <el-divider direction="vertical" />
           <button class="tb-btn last-read-btn" @click="jumpToLastRead"
             :title="`上次阅读：第${lastReadPos.pageNumber}页`">
-            <el-icon><Clock /></el-icon>
-            <span>继续 · 第{{ lastReadPos.pageNumber }}页</span>
+            <div class="last-read-main">
+              <el-icon><Clock /></el-icon>
+              <span>继续 · 第{{ lastReadPos.pageNumber }}页</span>
+            </div>
             <span class="last-read-time">{{ formatLastReadTime(lastReadPos.savedAt) }}</span>
           </button>
         </template>
@@ -480,9 +482,17 @@ async function initPdf() {
   pdfError.value   = ''
   try {
     bookInfo.value = await booksApi.getBook(bookId)
-    const objUrl   = await booksApi.getPdfObjectUrl(bookId)
-    pdfDoc         = await pdfjsLib.getDocument(objUrl).promise
-    URL.revokeObjectURL(objUrl)
+
+    // 使用 HTTP Range 分片加载：PDF.js 会自动按需请求内容，无需预先下载整个文件
+    const pdfConfig = booksApi.getPdfConfig(bookId)
+    const loadingTask = pdfjsLib.getDocument({
+      ...pdfConfig,
+      rangeChunkSize: 65536,   // 每次 Range 请求拉取 64 KB
+      disableAutoFetch: false, // 允许后台预取
+      disableStream: false,    // 允许流式处理
+    })
+
+    pdfDoc = await loadingTask.promise
     totalPages.value = pdfDoc.numPages
     thumbnails.value = new Array(pdfDoc.numPages).fill(null)
     pdfLoading.value = false
@@ -1611,8 +1621,13 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: flex-start;
   padding: 4px 10px;
-  height: auto;
-  line-height: 1.2;
+  gap: 1px;
+  line-height: 1.25;
+}
+.last-read-main {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 .last-read-time {
   font-size: 10px;

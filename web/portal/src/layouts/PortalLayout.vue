@@ -17,18 +17,18 @@
         <!-- 主导航 -->
         <nav class="nav-links">
           <router-link to="/" :class="{ active: $route.name === 'Home' }">首页</router-link>
-          <router-link to="/exams" :class="{ active: $route.name === 'ExamList' }">考试中心</router-link>
-          <router-link
-            v-if="auth.isLoggedIn"
-            to="/practice"
-            :class="{ active: ['PracticeSetup','PracticeRoom','PracticeResult'].includes($route.name) }">
-            在线练习
-          </router-link>
+          <router-link to="/exams" :class="{ active: $route.name === 'ExamList' }">考试中心</router-link>    
           <router-link
             v-if="auth.isLoggedIn && auth.isStudent"
             to="/my-results"
             :class="{ active: $route.name === 'MyResults' }">
             我的成绩
+          </router-link>
+          <router-link
+            v-if="auth.isLoggedIn"
+            to="/practice"
+            :class="{ active: ['PracticeSetup','PracticeRoom','PracticeResult'].includes($route.name) }">
+            在线练习
           </router-link>
           <router-link
             v-if="auth.isLoggedIn"

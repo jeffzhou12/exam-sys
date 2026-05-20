@@ -17,6 +17,9 @@ public class PracticeController(
     SubmitPracticeCommandHandler submitHandler,
     GetSimilarQuestionsQueryHandler similarHandler,
     ExplainQuestionCommandHandler explainHandler,
+    GetQuestionAnswerQueryHandler getAnswerHandler,
+    SavePracticeSessionCommandHandler saveSessionHandler,
+    GetPracticeHistoryQueryHandler getHistoryHandler,
     ITenantService tenantService) : ControllerBase
 {
     private Guid? TenantId => tenantService.GetCurrentTenantId();
@@ -98,7 +101,73 @@ public class PracticeController(
             return NotFound(new { error = ex.Message });
         }
     }
+
+    /// <summary>获取题目参考答案和解析（学生自查）</summary>
+    [HttpGet("questions/{questionId:guid}/answer")]
+    public async Task<IActionResult> GetQuestionAnswer(
+        Guid questionId,
+        CancellationToken cancellationToken = default)
+    {
+        if (TenantId is null)
+            return BadRequest(new { error = "无法确定租户。" });
+
+        var result = await getAnswerHandler.Handle(
+            new GetQuestionAnswerQuery(TenantId.Value, questionId),
+            cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>保存练习会话记录（提交答案后由前端调用）</summary>
+    [HttpPost("sessions")]
+    public async Task<IActionResult> SaveSession(
+        [FromBody] SaveSessionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (TenantId is null)
+            return BadRequest(new { error = "无法确定租户。" });
+
+        var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                     ?? User.FindFirstValue("sub")
+                     ?? User.FindFirstValue("id");
+        if (studentId is null)
+            return Unauthorized();
+
+        var id = await saveSessionHandler.Handle(
+            new SavePracticeSessionCommand(
+                TenantId.Value, studentId,
+                request.Count, request.CorrectCount, request.TotalScore, request.MaxScore,
+                request.TypeName, request.KnowledgePoint,
+                request.QuestionType, request.Difficulty, request.SetupCount),
+            cancellationToken);
+
+        return Ok(new { id });
+    }
+
+    /// <summary>获取当前用户的练习历史记录（最近 20 条）</summary>
+    [HttpGet("sessions")]
+    public async Task<IActionResult> GetHistory(CancellationToken cancellationToken = default)
+    {
+        if (TenantId is null)
+            return BadRequest(new { error = "无法确定租户。" });
+
+        var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                     ?? User.FindFirstValue("sub")
+                     ?? User.FindFirstValue("id");
+        if (studentId is null)
+            return Unauthorized();
+
+        var result = await getHistoryHandler.Handle(
+            new GetPracticeHistoryQuery(TenantId.Value, studentId),
+            cancellationToken);
+
+        return Ok(result);
+    }
 }
 
 public record SubmitAnswerItem(Guid QuestionId, string Answer);
 public record SubmitPracticeRequest(List<SubmitAnswerItem> Answers);
+public record SaveSessionRequest(
+    int Count, int CorrectCount, int TotalScore, int MaxScore,
+    string? TypeName, string? KnowledgePoint,
+    int? QuestionType, int? Difficulty, int SetupCount);

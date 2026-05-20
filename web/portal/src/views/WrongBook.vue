@@ -6,6 +6,7 @@
         <el-button
           v-if="selected.length"
           type="primary"
+          round
           @click="practiceSelected">
           练习已选 ({{ selected.length }})
         </el-button>
@@ -13,6 +14,7 @@
           v-if="book.length"
           type="primary"
           plain
+          round
           @click="practiceAll">
           全部练习
         </el-button>
@@ -20,10 +22,11 @@
           v-if="selected.length"
           type="danger"
           plain
+          round
           @click="removeSelected">
           删除已选
         </el-button>
-        <el-button v-if="book.length" plain @click="clearAll">清空错题本</el-button>
+        <el-button v-if="book.length" plain round @click="clearAll">清空错题本</el-button>
       </div>
     </div>
 
@@ -80,7 +83,8 @@
           <el-button size="small" plain @click="openSendMsg(item)">
             <el-icon><ChatDotRound /></el-icon> 求助
           </el-button>
-          <el-button size="small" type="danger" plain @click="removeItem(item.questionId)">
+          <el-button size="small" style="margin-left: 0;" type="danger" plain @click="removeItem(item.questionId)">
+            <el-icon><Delete /></el-icon>
             移除
           </el-button>
         </div>

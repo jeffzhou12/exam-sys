@@ -19,6 +19,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<Book> Books => Set<Book>();
     public DbSet<BookAnnotation> BookAnnotations => Set<BookAnnotation>();
+    public DbSet<PracticeSession> PracticeSessions => Set<PracticeSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

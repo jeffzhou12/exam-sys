@@ -99,12 +99,64 @@ public class SubmitAnswersCommandHandler(IApplicationDbContext context)
 
             if (studentAnswer is null) continue;
 
-            var isCorrect = string.Equals(
-                answer.Content.Trim(), question.CorrectAnswer.Trim(),
-                StringComparison.OrdinalIgnoreCase);
+            var isCorrect = question.Type switch
+            {
+                QuestionType.MultipleChoice => AnswerNormalizer.MultiEquals(answer.Content, question.CorrectAnswer),
+                QuestionType.TrueFalse      => AnswerNormalizer.BoolEquals(answer.Content, question.CorrectAnswer),
+                _                           => string.Equals(
+                                                   answer.Content.Trim(), question.CorrectAnswer.Trim(),
+                                                   StringComparison.OrdinalIgnoreCase),
+            };
 
             studentAnswer.Score         = isCorrect ? (examQuestionMap.GetValueOrDefault(question.Id, 0)) : 0;
             studentAnswer.GradingStatus = GradingStatus.AutoGraded;
         }
+    }
+}
+
+/// <summary>
+/// 答案规范化工具，供练习和正式考试评分共用。
+/// </summary>
+internal static class AnswerNormalizer
+{
+    /// <summary>
+    /// 将多选答案规范化为排序选项列表，兼容 "ABC" 和 "A,B,C" 两种格式。
+    /// </summary>
+    internal static List<string> NormalizeMulti(string answer)
+    {
+        if (string.IsNullOrWhiteSpace(answer)) return [];
+        var trimmed = answer.Trim();
+        IEnumerable<string> parts = trimmed.Contains(',')
+            ? trimmed.Split(',')
+            : trimmed.Select(c => c.ToString());
+        return parts
+            .Select(s => s.Trim().ToUpperInvariant())
+            .Where(s => s.Length > 0)
+            .OrderBy(x => x)
+            .ToList();
+    }
+
+    /// <summary>
+    /// 将判断题答案规范化为 bool，兼容 True/False（英文）和 正确/错误（中文）。
+    /// </summary>
+    internal static bool? NormalizeBool(string answer) => answer.Trim().ToUpperInvariant() switch
+    {
+        "TRUE"  or "正确" or "对" or "1" or "YES" or "√" => true,
+        "FALSE" or "错误" or "错" or "0" or "NO"  or "×" => false,
+        _ => null,
+    };
+
+    internal static bool MultiEquals(string student, string correct)
+    {
+        var a = NormalizeMulti(student);
+        var b = NormalizeMulti(correct);
+        return a.SequenceEqual(b);
+    }
+
+    internal static bool BoolEquals(string student, string correct)
+    {
+        var a = NormalizeBool(student);
+        var b = NormalizeBool(correct);
+        return a.HasValue && b.HasValue && a == b;
     }
 }

@@ -19,4 +19,16 @@ export const practiceApi = {
   /** AI 详解题目 */
   explain: (questionId) =>
     request.post(`/practice/questions/${questionId}/explain`, {}, { withTenant: true }),
+
+  /** 获取题目参考答案和解析 */
+  getAnswer: (questionId) =>
+    request.get(`/practice/questions/${questionId}/answer`, { withTenant: true }),
+
+  /** 保存练习会话记录到服务端 */
+  saveSession: (data) =>
+    request.post('/practice/sessions', data, { withTenant: true }),
+
+  /** 获取当前用户的服务端练习历史记录 */
+  getHistory: () =>
+    request.get('/practice/sessions', { withTenant: true }),
 }

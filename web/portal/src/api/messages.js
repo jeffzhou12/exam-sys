@@ -15,4 +15,12 @@ export const messagesApi = {
 
   getTeachers: () =>
     request.get('/messages/teachers', { withTenant: true }),
+
+  // 获取对话线程（根消息 + 全部回复，按时间升序）
+  getThread: (id) =>
+    request.get(`/messages/${id}/thread`, { withTenant: true }),
+
+  // 获取消息关联的题目（学生有权限）
+  getMessageQuestions: (id) =>
+    request.get(`/messages/${id}/questions`, { withTenant: true }),
 }

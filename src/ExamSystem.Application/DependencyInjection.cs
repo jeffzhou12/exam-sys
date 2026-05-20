@@ -53,10 +53,15 @@ public static class DependencyInjection
         services.AddScoped<Practice.SubmitPracticeCommandHandler>();
         services.AddScoped<Practice.GetSimilarQuestionsQueryHandler>();
         services.AddScoped<Practice.ExplainQuestionCommandHandler>();
+        services.AddScoped<Practice.GetQuestionAnswerQueryHandler>();
+        services.AddScoped<Practice.SavePracticeSessionCommandHandler>();
+        services.AddScoped<Practice.GetPracticeHistoryQueryHandler>();
 
         // 站内信
         services.AddScoped<Messages.SendMessageCommandHandler>();
         services.AddScoped<Messages.GetMessagesQueryHandler>();
+        services.AddScoped<Messages.GetMessageThreadQueryHandler>();
+        services.AddScoped<Messages.GetMessageQuestionsQueryHandler>();
         services.AddScoped<Messages.MarkMessageReadCommandHandler>();
         services.AddScoped<Messages.GetTenantTeachersQueryHandler>();
 

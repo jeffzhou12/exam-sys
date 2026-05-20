@@ -69,7 +69,7 @@ const props = defineProps({
   attachedQuestions: { type: Array, default: () => [] },
   attachedExamPaperId: { type: String, default: null },
 })
-const emit = defineEmits(['update:visible'])
+const emit = defineEmits(['update:visible', 'sent'])
 
 const formRef = ref(null)
 const teachers = ref([])
@@ -109,6 +109,7 @@ async function send() {
       attachedExamPaperId: props.attachedExamPaperId || null,
     })
     ElMessage.success('消息已发送')
+    emit('sent')
     emit('update:visible', false)
   } finally {
     sending.value = false

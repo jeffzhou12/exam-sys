@@ -511,10 +511,41 @@ const coverFile = ref(null)        // 待上传的 File 对象
 const coverPreviewUrl = ref(null)  // 本地 blob 预览 URL
 const coverFileName = ref('')
 
-function handleCoverChange(file) {
-  coverFile.value = file.raw
-  coverFileName.value = file.name
-  coverPreviewUrl.value = URL.createObjectURL(file.raw)
+/** 将 File/Blob 压缩为不超过 maxWidth 的 JPEG，返回新 File */
+function compressCoverImage(file, maxWidth = 600, quality = 0.85) {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        let w = img.width
+        let h = img.height
+        if (w > maxWidth) {
+          h = Math.round((h * maxWidth) / w)
+          w = maxWidth
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width  = w
+        canvas.height = h
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+        canvas.toBlob(
+          (blob) => resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })),
+          'image/jpeg',
+          quality,
+        )
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+async function handleCoverChange(file) {
+  const compressed = await compressCoverImage(file.raw)
+  coverFile.value = compressed
+  coverFileName.value = compressed.name
+  if (coverPreviewUrl.value) URL.revokeObjectURL(coverPreviewUrl.value)
+  coverPreviewUrl.value = URL.createObjectURL(compressed)
 }
 
 function clearCoverUpload() {

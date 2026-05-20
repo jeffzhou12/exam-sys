@@ -18,6 +18,7 @@ CREATE EXTENSION IF NOT EXISTS "vector";
 -- =============================================================================
 DROP TABLE IF EXISTS book_annotations  CASCADE;
 DROP TABLE IF EXISTS books             CASCADE;
+DROP TABLE IF EXISTS practice_sessions CASCADE;
 DROP TABLE IF EXISTS messages          CASCADE;
 DROP TABLE IF EXISTS student_answers   CASCADE;
 DROP TABLE IF EXISTS exam_questions    CASCADE;
@@ -231,6 +232,7 @@ CREATE TABLE messages (
     attached_question_ids JSONB,                -- 题目 UUID 数组，如 ["uuid1","uuid2"]
     attached_exam_paper_id UUID,
     is_read               BOOLEAN     NOT NULL DEFAULT FALSE,
+    parent_message_id     UUID        REFERENCES messages(id) ON DELETE SET NULL,  -- 非空表示这是回复消息
     created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -301,6 +303,31 @@ CREATE INDEX IF NOT EXISTS idx_book_ann_user       ON book_annotations(user_id, 
 
 COMMENT ON TABLE  book_annotations               IS '图书标注表，每条记录对应一次书签、备注或 AI 问答';
 COMMENT ON COLUMN book_annotations.annotation_type IS '1=书签  2=阅读备注  3=AI问答';
+
+-- =============================================================================
+-- 在线练习会话记录表
+-- 存储每次在线练习的成绩摘要，支持跨设备恢复历史记录
+-- =============================================================================
+CREATE TABLE practice_sessions (
+    id               UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id        UUID         NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    student_id       VARCHAR(100) NOT NULL,
+    count            INTEGER      NOT NULL,
+    correct_count    INTEGER      NOT NULL DEFAULT 0,
+    total_score      INTEGER      NOT NULL DEFAULT 0,
+    max_score        INTEGER      NOT NULL DEFAULT 0,
+    type_name        VARCHAR(50),
+    knowledge_point  VARCHAR(200),
+    question_type    INTEGER,
+    difficulty       INTEGER,
+    setup_count      INTEGER      NOT NULL DEFAULT 10,
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_practice_sessions_student ON practice_sessions(tenant_id, student_id, created_at DESC);
+
+COMMENT ON TABLE practice_sessions IS '在线练习会话记录，持久化保存每次练习成绩，支持跨设备恢复';
 
 -- =============================================================================
 -- AI 模型配置表

@@ -155,6 +155,7 @@ onMounted(async () => {
   font-size: 22px;
   font-weight: 700;
   margin-bottom: 8px;
+  color: #ffffff;
 }
 .submit-time {
   font-size: 13px;

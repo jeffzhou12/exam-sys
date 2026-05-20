@@ -22,4 +22,7 @@ public class Message : BaseEntity
     public Guid? AttachedExamPaperId { get; set; }
 
     public bool IsRead { get; set; } = false;
+
+    /// <summary>回复时指向根消息的 ID，null 表示本身是起始消息</summary>
+    public Guid? ParentMessageId { get; set; }
 }

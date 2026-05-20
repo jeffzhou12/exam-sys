@@ -33,7 +33,7 @@
         </div>
         <div class="result-actions">
           <router-link :to="`/results/${item.id}`">
-            <el-button size="small" type="primary" plain round>查看详情</el-button>
+            <el-button type="primary" round>查看详情</el-button>
           </router-link>
         </div>
       </div>
