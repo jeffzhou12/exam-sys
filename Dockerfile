@@ -5,16 +5,16 @@ WORKDIR /app
 
 # 先复制项目文件以利用层缓存
 COPY ExamSystem.slnx ./
-COPY src/ExamSystem.Domain/ExamSystem.Domain.csproj           src/ExamSystem.Domain/
-COPY src/ExamSystem.Application/ExamSystem.Application.csproj src/ExamSystem.Application/
-COPY src/ExamSystem.Infrastructure/ExamSystem.Infrastructure.csproj src/ExamSystem.Infrastructure/
-COPY src/ExamSystem.API/ExamSystem.API.csproj                 src/ExamSystem.API/
+COPY src/api/ExamSystem.Domain/ExamSystem.Domain.csproj           src/api/ExamSystem.Domain/
+COPY src/api/ExamSystem.Application/ExamSystem.Application.csproj src/api/ExamSystem.Application/
+COPY src/api/ExamSystem.Infrastructure/ExamSystem.Infrastructure.csproj src/api/ExamSystem.Infrastructure/
+COPY src/api/ExamSystem.API/ExamSystem.API.csproj                 src/api/ExamSystem.API/
 
-RUN dotnet restore src/ExamSystem.API/ExamSystem.API.csproj
+RUN dotnet restore src/api/ExamSystem.API/ExamSystem.API.csproj
 
 # 复制剩余源码并发布
-COPY src/ src/
-RUN dotnet publish src/ExamSystem.API/ExamSystem.API.csproj \
+COPY src/api/ src/api/
+RUN dotnet publish src/api/ExamSystem.API/ExamSystem.API.csproj \
     -c Release \
     -o /app/publish \
     --no-restore

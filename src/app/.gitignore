@@ -1,0 +1,38 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.g.dart
+*.freezed.dart
+
+# 本地配置 / 秘钥
+.env
+.env.*
+android/key.properties
+android/app/*.jks
+ios/Runner/GoogleService-Info.plist
+google-services.json
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Android
+android/.gradle/
+android/app/google-services.json
+android/captures/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# IDE
+.idea/
+*.iml
+.vscode/

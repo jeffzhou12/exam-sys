@@ -1,0 +1,9 @@
+app_identifier("com.examsystem.app")
+apple_id("your_apple_id@example.com")
+
+itc_team_id("your_itc_team_id")
+team_id("your_team_id")
+
+# Android
+json_key_file("fastlane/google-play-key.json")
+package_name("com.examsystem.app")

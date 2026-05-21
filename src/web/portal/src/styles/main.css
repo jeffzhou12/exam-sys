@@ -1,0 +1,973 @@
+/* ════════════════════════════════════════════════════════
+   全局设计系统 - 学考平台
+════════════════════════════════════════════════════════ */
+
+/* ── 设计令牌 ─────────────────────────────────────────── */
+:root {
+  /* 主色调 */
+  --color-primary:       #1d4ed8;
+  --color-primary-light: #3b82f6;
+  --color-primary-dark:  #1e40af;
+  --color-primary-bg:    rgba(29, 78, 216, 0.06);
+
+  /* 辅助色 */
+  --color-success:  #10b981;
+  --color-warning:  #f59e0b;
+  --color-danger:   #ef4444;
+  --color-info:     #6366f1;
+
+  /* 中性色 */
+  --color-text-1: #0f172a;
+  --color-text-2: #1e293b;
+  --color-text-3: #475569;
+  --color-text-4: #94a3b8;
+  --color-border:  #e2e8f0;
+  --color-border-2:#f1f5f9;
+
+  /* 背景 */
+  --bg-page:   #f8fafc;
+  --bg-card:   #ffffff;
+  --bg-elevated: #ffffff;
+
+  /* 阴影 */
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.06);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.10);
+  --shadow-xl:  0 16px 48px rgba(0,0,0,0.12);
+
+  /* 圆角 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* 字体 */
+  --font-sans: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ── Google Fonts 引入 ───────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap');
+
+/* ── 重置 ────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── 基础排版 ──────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text-2);
+  background: var(--bg-page);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: inherit; text-decoration: none; }
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-text-1);
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+/* ── 容器 ────────────────────────────────────────────── */
+.container {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  width: 100%;
+}
+
+/* ── 卡片基础样式 ──────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-2);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.card:hover { box-shadow: var(--shadow-md); }
+.card--elevated { box-shadow: var(--shadow-md); }
+.card--elevated:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+
+/* ── Element Plus 全局覆盖 ───────────────────────────── */
+:root {
+  --el-color-primary: #1d4ed8;
+  --el-border-radius-base: 8px;
+  --el-font-family: var(--font-sans);
+}
+
+/* 按钮微调 */
+.el-button--primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff !important;
+}
+.el-button--primary:hover,
+.el-button--primary:focus {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-light);
+  color: #fff !important;
+}
+
+/* 卡片微调 */
+.el-card {
+  border-radius: var(--radius-lg) !important;
+  border-color: var(--color-border-2) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+.el-card__header {
+  border-bottom-color: var(--color-border-2) !important;
+  font-weight: 600;
+}
+
+/* 分页微调 */
+.el-pagination {
+  justify-content: center;
+  margin-top: 32px;
+}
+
+/* 对话框 */
+.el-dialog {
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-xl) !important;
+  overflow: hidden;
+}
+.el-dialog__header {
+  border-bottom: 1px solid var(--color-border-2);
+  padding: 20px 24px 16px;
+  background: linear-gradient(135deg, #fafbff, #fff);
+}
+.el-dialog__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-1);
+}
+.el-dialog__body { padding: 24px; }
+.el-dialog__footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-border-2);
+  background: #fafbff;
+}
+
+/* 抽屉 */
+.el-drawer {
+  border-radius: var(--radius-md) 0 0 var(--radius-md) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+.el-drawer__header {
+  border-bottom: 1px solid var(--color-border-2);
+  padding: 20px 24px 16px;
+  margin-bottom: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-1);
+}
+.el-drawer__body { padding: 0; }
+
+/* 标签 */
+.el-tag {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* 下拉菜单 */
+.el-dropdown-menu {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border: 1px solid var(--color-border-2) !important;
+  padding: 4px !important;
+  overflow: hidden;
+}
+.el-dropdown-menu__item {
+  border-radius: var(--radius-sm) !important;
+  font-size: 14px !important;
+  margin: 1px 0;
+}
+.el-dropdown-menu__item:hover {
+  background: var(--color-primary-bg) !important;
+  color: var(--color-primary) !important;
+}
+
+/* 表单 */
+.el-form-item__label {
+  font-weight: 500;
+  color: var(--color-text-2);
+}
+.el-input__wrapper {
+  border-radius: var(--radius-sm) !important;
+  transition: box-shadow 0.2s !important;
+}
+.el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--color-primary-light) inset !important;
+}
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--color-primary) inset, 0 0 0 3px rgba(29,78,216,0.12) !important;
+}
+
+/* 骨架屏 */
+.el-skeleton { border-radius: var(--radius-md); overflow: hidden; }
+
+/* 空状态 */
+.el-empty__description { color: var(--color-text-4); }
+
+/* 提示 */
+.el-tooltip__trigger:focus-visible { outline: none; }
+
+/* ── 通用辅助类 ─────────────────────────────────────── */
+.page-wrap {
+  padding: 40px 0 60px;
+}
+
+.page-header {
+  margin-bottom: 32px;
+}
+.page-header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--color-text-1);
+  margin-bottom: 6px;
+  letter-spacing: -0.5px;
+}
+.page-header p {
+  font-size: 15px;
+  color: var(--color-text-3);
+}
+
+/* 加载/空 占位 */
+.loading-wrap, .empty-wrap {
+  padding: 60px 0;
+  text-align: center;
+}
+
+/* ── 响应式 ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .page-header h1 { font-size: 22px; }
+}
+@media (max-width: 480px) {
+  .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   深色主题设计令牌
+════════════════════════════════════════════════════════ */
+html.dark {
+  /* 主色调（深色模式下亮度稍高，确保在深色背景上可读） */
+  --color-primary:       #3b82f6;
+  --color-primary-light: #60a5fa;
+  --color-primary-dark:  #2563eb;
+  --color-primary-bg:    rgba(59, 130, 246, 0.12);
+
+  /* 辅助色 */
+  --color-success:  #34d399;
+  --color-warning:  #fbbf24;
+  --color-danger:   #f87171;
+  --color-info:     #818cf8;
+
+  /* 中性色 */
+  --color-text-1: #f1f5f9;
+  --color-text-2: #cbd5e1;
+  --color-text-3: #94a3b8;
+  --color-text-4: #64748b;
+  --color-border:  #334155;
+  --color-border-2:#1e293b;
+
+  /* 背景 */
+  --bg-page:     #0f172a;
+  --bg-card:     #1e293b;
+  --bg-elevated: #263548;
+
+  /* 阴影（深色下加深） */
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.30);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.45);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.55);
+  --shadow-xl:  0 16px 48px rgba(0,0,0,0.65);
+
+  /* Element Plus 主色 */
+  --el-color-primary: #3b82f6;
+}
+
+/* ── 深色主题：导航栏专用变量 ───────────────────────── */
+:root {
+  --nav-bg:                     rgba(255, 255, 255, 0.95);
+  --nav-border:                 rgba(0, 0, 0, 0.06);
+  --nav-logo-text:              #1e293b;
+  --nav-link-color:             #475569;
+  --nav-link-hover-color:       #1d4ed8;
+  --nav-link-hover-bg:          rgba(29, 78, 216, 0.06);
+  --nav-link-active-color:      #1d4ed8;
+  --nav-link-active-bg:         rgba(29, 78, 216, 0.08);
+  --nav-link-indicator:         #1d4ed8;
+  --nav-user-trigger-bg:        #fafafa;
+  --nav-user-trigger-border:    #e2e8f0;
+  --nav-user-trigger-hover-bg:  #eff6ff;
+  --nav-user-trigger-hover-bdr: #93c5fd;
+  --nav-username-color:         #374151;
+  --nav-theme-btn-color:        #94a3b8;
+  --nav-login-btn-border:       #cbd5e1;
+  --nav-login-btn-color:        #475569;
+}
+html.dark {
+  --nav-bg:                     rgba(15, 23, 42, 0.95);
+  --nav-border:                 rgba(51, 65, 85, 0.6);
+  --nav-logo-text:              #f1f5f9;
+  --nav-link-color:             #94a3b8;
+  --nav-link-hover-color:       #60a5fa;
+  --nav-link-hover-bg:          rgba(59, 130, 246, 0.08);
+  --nav-link-active-color:      #3b82f6;
+  --nav-link-active-bg:         rgba(59, 130, 246, 0.12);
+  --nav-link-indicator:         #3b82f6;
+  --nav-user-trigger-bg:        #1e293b;
+  --nav-user-trigger-border:    #334155;
+  --nav-user-trigger-hover-bg:  rgba(59, 130, 246, 0.12);
+  --nav-user-trigger-hover-bdr: #3b82f6;
+  --nav-username-color:         #e2e8f0;
+  --nav-theme-btn-color:        #64748b;
+  --nav-login-btn-border:       #334155;
+  --nav-login-btn-color:        #94a3b8;
+}
+
+/* ── 深色主题：Element Plus 全局微调 ───────────────── */
+html.dark .el-dialog__header {
+  background: linear-gradient(135deg, #1e293b, #263548);
+}
+html.dark .el-dialog__footer {
+  background: #1e293b;
+}
+html.dark .el-card {
+  background: var(--bg-card) !important;
+}
+
+/* ── 过渡动画 ───────────────────────────────────────── */
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.1s ease,
+              box-shadow 0.2s ease;
+}
+
+/* ════════════════════════════════════════════════════════
+   Portal 视图深度深色适配
+   html.dark .class 优先级 (0,2,1) > scoped .class[data-v] (0,2,0)
+   无需修改各组件文件即可覆盖所有 scoped 样式
+════════════════════════════════════════════════════════ */
+
+/* ── Element Plus 输入框 ─────────────────────────────── */
+html.dark .el-input__wrapper {
+  background: #1e293b !important;
+  box-shadow: 0 0 0 1px #334155 inset !important;
+}
+html.dark .el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px #475569 inset !important;
+}
+html.dark .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px #3b82f6 inset, 0 0 0 3px rgba(59,130,246,0.12) !important;
+}
+html.dark .el-input__inner {
+  color: #f1f5f9;
+}
+html.dark .el-input__inner::placeholder {
+  color: #475569;
+}
+html.dark .el-select .el-input__wrapper {
+  background: #1e293b !important;
+}
+html.dark .el-textarea__inner {
+  background: #1e293b;
+  color: #f1f5f9;
+  box-shadow: 0 0 0 1px #334155 inset !important;
+}
+html.dark .el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px #3b82f6 inset !important;
+}
+
+/* ── Element Plus 表格 ───────────────────────────────── */
+html.dark .el-table {
+  --el-table-border-color: #334155;
+  --el-table-header-bg-color: #263548;
+  --el-table-row-hover-bg-color: #263548;
+  --el-fill-color-lighter: #263548;
+}
+html.dark .el-table th.el-table__cell {
+  background: #263548;
+  color: #94a3b8;
+}
+html.dark .el-table tr {
+  background: #1e293b;
+  color: #cbd5e1;
+}
+html.dark .el-table__inner-wrapper::before {
+  background: #334155;
+}
+
+/* ── Element Plus 下拉菜单 ───────────────────────────── */
+html.dark .el-dropdown-menu {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+html.dark .el-dropdown-menu__item {
+  color: #cbd5e1 !important;
+}
+html.dark .el-dropdown-menu__item:hover {
+  background: #263548 !important;
+  color: #60a5fa !important;
+}
+
+/* ── Element Plus 弹出层 ─────────────────────────────── */
+html.dark .el-popper.is-light {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+html.dark .el-popper.is-light .el-popper__arrow::before {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+/* ── Element Plus Select 面板 ────────────────────────── */
+html.dark .el-select-dropdown {
+  background: #1e293b;
+  border-color: #334155;
+}
+html.dark .el-select-dropdown__item {
+  color: #cbd5e1;
+}
+html.dark .el-select-dropdown__item.is-hovering,
+html.dark .el-select-dropdown__item:hover {
+  background: #263548;
+}
+html.dark .el-select-dropdown__item.is-selected {
+  color: #3b82f6;
+}
+
+/* ── Element Plus 分页 ───────────────────────────────── */
+html.dark .el-pagination .el-pager li {
+  background: #1e293b;
+  color: #94a3b8;
+}
+html.dark .el-pagination .el-pager li:hover {
+  color: #3b82f6;
+}
+html.dark .el-pagination .btn-prev,
+html.dark .el-pagination .btn-next {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+/* ── Element Plus 对话框 ─────────────────────────────── */
+html.dark .el-dialog {
+  background: #1e293b;
+}
+html.dark .el-dialog__title {
+  color: #f1f5f9 !important;
+}
+html.dark .el-dialog__body {
+  color: #cbd5e1;
+}
+
+/* ── 面包屑 ──────────────────────────────────────────── */
+html.dark .el-breadcrumb__item .el-breadcrumb__inner {
+  color: #64748b !important;
+}
+html.dark .el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: #cbd5e1 !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   通用页面标题 / 描述文字
+═══════════════════════════════════════════════════════ */
+html.dark .page-header h1,
+html.dark .page-header h2,
+html.dark .page-header p,
+html.dark .page-desc {
+  color: var(--color-text-1);
+}
+html.dark .page-header p,
+html.dark .page-desc {
+  color: var(--color-text-3) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   通用卡片、过滤栏、标签过滤
+═══════════════════════════════════════════════════════ */
+html.dark .filter-bar,
+html.dark .tag-filter {
+  background: var(--bg-card) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+html.dark .tag-filter-label {
+  color: var(--color-text-3) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ExamList / ExamDetail — 考试列表 & 详情
+═══════════════════════════════════════════════════════ */
+html.dark .exam-card {
+  background: var(--bg-card) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+html.dark .exam-card:hover {
+  border-color: #3b82f6 !important;
+}
+html.dark .card-title,
+html.dark .exam-title {
+  color: var(--color-text-1) !important;
+}
+html.dark .card-desc,
+html.dark .exam-desc {
+  color: var(--color-text-3) !important;
+}
+html.dark .card-meta span,
+html.dark .card-time {
+  color: var(--color-text-3) !important;
+}
+html.dark .card-actions,
+html.dark .exam-card-actions {
+  border-top-color: var(--color-border-2) !important;
+}
+
+html.dark .info-card {
+  background: var(--bg-card) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+html.dark .exam-title {
+  color: var(--color-text-1) !important;
+}
+html.dark .info-label {
+  color: var(--color-text-3) !important;
+}
+html.dark .info-value {
+  color: var(--color-text-1) !important;
+}
+html.dark .info-value.highlight {
+  color: #60a5fa !important;
+}
+html.dark .alert-link {
+  color: #60a5fa !important;
+}
+
+/* 注意事项卡片（黄色警告） */
+html.dark .notice-card {
+  background: rgba(180,83,9,0.1) !important;
+  border-color: rgba(180,83,9,0.25) !important;
+}
+html.dark .notice-card h3 {
+  color: #fcd34d !important;
+}
+html.dark .notice-card li {
+  color: #fde68a !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ExamRoom — 考试答题室
+═══════════════════════════════════════════════════════ */
+html.dark .exam-room {
+  background: var(--bg-page) !important;
+}
+html.dark .question-nav {
+  background: var(--bg-card) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+html.dark .nav-title {
+  color: var(--color-text-3) !important;
+}
+html.dark .nav-item {
+  background: var(--bg-elevated) !important;
+  color: var(--color-text-3) !important;
+  border-color: var(--color-border) !important;
+}
+html.dark .nav-item:hover {
+  background: var(--color-border) !important;
+}
+html.dark .nav-item.answered {
+  background: rgba(74,222,128,0.12) !important;
+  color: #4ade80 !important;
+  border-color: rgba(74,222,128,0.25) !important;
+}
+html.dark .nav-item.current {
+  background: rgba(59,130,246,0.2) !important;
+  border-color: #3b82f6 !important;
+  color: #60a5fa !important;
+}
+html.dark .nav-legend {
+  color: var(--color-text-4) !important;
+}
+html.dark .legend-dot.answered {
+  background: rgba(74,222,128,0.15) !important;
+  border-color: rgba(74,222,128,0.3) !important;
+}
+html.dark .legend-dot.unanswered {
+  background: var(--bg-elevated) !important;
+  border-color: var(--color-border) !important;
+}
+html.dark .question-card {
+  background: var(--bg-card) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+html.dark .q-index {
+  color: var(--color-text-1) !important;
+}
+html.dark .q-score {
+  color: var(--color-text-3) !important;
+  background: var(--bg-elevated) !important;
+}
+html.dark .q-content,
+html.dark .question-content {
+  color: var(--color-text-1) !important;
+}
+html.dark .option-item {
+  border-color: var(--color-border) !important;
+}
+html.dark .option-item:hover {
+  background: var(--bg-elevated) !important;
+  border-color: #3b82f6 !important;
+}
+html.dark .option-label {
+  color: #60a5fa !important;
+}
+html.dark .q-nav-btns,
+html.dark .question-actions {
+  border-top-color: var(--color-border) !important;
+}
+html.dark .question-helps {
+  border-top-color: var(--color-border) !important;
+}
+html.dark .q-progress {
+  color: var(--color-text-3) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PracticeRoom — 练习答题室
+═══════════════════════════════════════════════════════ */
+html.dark .practice-room {
+  background: var(--bg-page) !important;
+}
+html.dark .practice-header {
+  background: var(--bg-card) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+html.dark .header-progress {
+  color: var(--color-text-3) !important;
+}
+
+/* 答案解析面板 */
+html.dark .answer-panel {
+  background: rgba(74,222,128,0.08) !important;
+  border-color: rgba(74,222,128,0.2) !important;
+}
+html.dark .answer-label {
+  color: #4ade80 !important;
+}
+html.dark .answer-value {
+  color: var(--color-text-2) !important;
+}
+html.dark .answer-explanation {
+  color: var(--color-text-3) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PracticeSetup — 练习设置
+═══════════════════════════════════════════════════════ */
+html.dark .setup-card {
+  background: var(--bg-card) !important;
+  border-color: var(--color-border) !important;
+}
+html.dark .setup-header h2 {
+  color: var(--color-text-1) !important;
+}
+html.dark .setup-header p {
+  color: var(--color-text-3) !important;
+}
+html.dark .count-label {
+  color: #60a5fa !important;
+}
+html.dark .history-section h3 {
+  color: var(--color-text-2) !important;
+}
+html.dark .history-item,
+html.dark .score-stat {
+  background: var(--bg-elevated) !important;
+}
+html.dark .history-meta {
+  color: var(--color-text-3) !important;
+}
+html.dark .history-score-detail,
+html.dark .history-time {
+  color: var(--color-text-4) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PracticeResult / MyResults — 练习/考试结果
+═══════════════════════════════════════════════════════ */
+html.dark .result-overview,
+html.dark .result-card {
+  background: var(--bg-card) !important;
+  border-color: var(--color-border) !important;
+}
+html.dark .result-title,
+html.dark .score-num {
+  color: var(--color-text-1) !important;
+}
+html.dark .result-meta,
+html.dark .score-sub {
+  color: var(--color-text-3) !important;
+}
+html.dark .result-item {
+  background: var(--bg-card) !important;
+  border-color: var(--color-border) !important;
+}
+html.dark .result-item.wrong {
+  border-left-color: #ef4444 !important;
+}
+html.dark .item-index {
+  color: var(--color-text-2) !important;
+}
+html.dark .item-content {
+  color: var(--color-text-1) !important;
+}
+
+/* 评分颜色 — 保持语义 */
+html.dark .score-excellent { color: #4ade80 !important; }
+html.dark .score-pass      { color: #60a5fa !important; }
+html.dark .score-fail      { color: #f87171 !important; }
+html.dark .total-score,
+html.dark .score-pct       { color: var(--color-text-4) !important; }
+
+/* 答案行（颜色语义化深色版） */
+html.dark .answer-row.my-answer.correct {
+  background: rgba(74,222,128,0.1) !important;
+  color: #86efac !important;
+}
+html.dark .answer-row.my-answer.wrong,
+html.dark .answer-row.my-answer {
+  background: rgba(248,113,113,0.1) !important;
+  color: #fca5a5 !important;
+}
+html.dark .answer-row.correct-answer {
+  background: rgba(96,165,250,0.1) !important;
+  color: #93c5fd !important;
+}
+html.dark .answer-row.ref-answer {
+  background: rgba(253,224,71,0.08) !important;
+  color: #fde047 !important;
+}
+html.dark .explanation {
+  color: var(--color-text-3) !important;
+  background: var(--bg-elevated) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ResultDetail — 详细考试结果
+═══════════════════════════════════════════════════════ */
+html.dark .section-title {
+  color: var(--color-text-1) !important;
+}
+html.dark .answer-card {
+  background: var(--bg-card) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+html.dark .ans-index {
+  color: var(--color-text-1) !important;
+}
+html.dark .ans-score {
+  color: var(--color-text-3) !important;
+}
+html.dark .answer-question,
+html.dark .answer-content {
+  color: var(--color-text-2) !important;
+}
+html.dark .field-label {
+  color: var(--color-text-3) !important;
+}
+html.dark .ans-text.empty {
+  color: var(--color-text-4) !important;
+}
+html.dark .answer-feedback {
+  background: rgba(167,139,250,0.08) !important;
+  border-color: rgba(167,139,250,0.2) !important;
+  color: #c4b5fd !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Messages — 消息中心
+═══════════════════════════════════════════════════════ */
+html.dark .page-header h2 {
+  color: var(--color-text-1) !important;
+}
+html.dark .msg-list {
+  background: var(--color-border) !important;
+}
+html.dark .msg-item {
+  background: var(--bg-card) !important;
+}
+html.dark .msg-item:hover {
+  background: var(--bg-elevated) !important;
+}
+html.dark .msg-item.unread {
+  background: rgba(59,130,246,0.08) !important;
+}
+html.dark .msg-from {
+  color: var(--color-text-2) !important;
+}
+html.dark .msg-date,
+html.dark .msg-preview {
+  color: var(--color-text-4) !important;
+}
+html.dark .msg-subject {
+  color: var(--color-text-1) !important;
+}
+html.dark .bubble-sender,
+html.dark .bubble-time {
+  color: var(--color-text-4) !important;
+}
+html.dark .bubble-row.other .bubble {
+  background: var(--bg-elevated) !important;
+  color: var(--color-text-2) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   WrongBook — 错题本
+═══════════════════════════════════════════════════════ */
+html.dark .book-item {
+  background: var(--bg-card) !important;
+  border-color: var(--color-border) !important;
+}
+html.dark .book-item.selected {
+  border-color: #3b82f6 !important;
+  background: rgba(59,130,246,0.08) !important;
+}
+html.dark .kp-tag {
+  color: #a78bfa !important;
+  background: rgba(139,92,246,0.12) !important;
+}
+html.dark .added-time {
+  color: var(--color-text-4) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   BookList — 图书列表
+═══════════════════════════════════════════════════════ */
+html.dark .book-card {
+  background: var(--bg-card) !important;
+  border-color: var(--color-border) !important;
+}
+html.dark .book-card:hover {
+  border-color: #3b82f6 !important;
+}
+html.dark .book-cover {
+  background: linear-gradient(135deg, var(--bg-elevated), var(--color-border)) !important;
+}
+html.dark .cover-placeholder {
+  color: var(--color-text-4) !important;
+}
+html.dark .cover-placeholder.cover-has-pdf {
+  background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.15)) !important;
+  color: #60a5fa !important;
+}
+html.dark .book-title {
+  color: var(--color-text-1) !important;
+}
+html.dark .book-author {
+  color: var(--color-text-4) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TeacherExams — 教师考试管理
+═══════════════════════════════════════════════════════ */
+html.dark .exam-card-meta {
+  color: var(--color-text-3) !important;
+}
+html.dark .exam-card-time {
+  color: var(--color-text-4) !important;
+}
+html.dark .exam-score-badge {
+  background: var(--bg-elevated) !important;
+  color: var(--color-text-3) !important;
+}
+html.dark .exam-meta-row .meta-item,
+html.dark .exam-time-row {
+  color: var(--color-text-3) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TeacherExamResults — 教师阅卷
+═══════════════════════════════════════════════════════ */
+html.dark .page-title {
+  color: var(--color-text-1) !important;
+}
+html.dark .manual-grade-area {
+  background: var(--bg-elevated) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Home — 首页
+═══════════════════════════════════════════════════════ */
+/* 波浪 SVG fill 属性（presentation attribute）可被 CSS 覆盖 */
+html.dark .hero-wave path {
+  fill: #0f172a; /* 与 --bg-page 一致 */
+}
+
+html.dark .features-section,
+html.dark .books-section {
+  background: var(--bg-page) !important;
+}
+html.dark .exams-section {
+  background: var(--bg-card) !important;
+}
+html.dark .feature-content {
+  background: var(--bg-card) !important;
+}
+html.dark .feature-row {
+  border-color: var(--color-border) !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35) !important;
+}
+html.dark .feature-title {
+  color: var(--color-text-1) !important;
+}
+html.dark .feature-desc {
+  color: var(--color-text-3) !important;
+}
+html.dark .feature-points li {
+  color: var(--color-text-2) !important;
+}
+html.dark .section-title {
+  color: var(--color-text-1) !important;
+}
+html.dark .section-subtitle {
+  color: var(--color-text-3) !important;
+}
+html.dark .section-eyebrow {
+  color: #60a5fa !important;
+  background: rgba(59,130,246,0.1) !important;
+}
+html.dark .deco-score-card,
+html.dark .dq-chip {
+  background: var(--bg-elevated) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+html.dark .dsc-label {
+  color: var(--color-text-4) !important;
+}
+html.dark .book-skeleton {
+  background: var(--bg-card) !important;
+  border-color: var(--color-border) !important;
+}
+
+

@@ -89,22 +89,24 @@ exam-system/
 │       ├── Middleware/             # TenantMiddleware（租户验证）
 │       └── Program.cs
 │
-├── web/admin/                      # 管理后台前端（Vue 3，端口 3000）
-│   ├── src/
-│   │   ├── views/                  # Login, Dashboard, Tenants, Users, Questions, ExamPapers
-│   │   ├── stores/                 # Pinia（auth, tenant）
-│   │   ├── router/                 # 路由（角色权限守卫）
-│   │   └── api/                    # Axios 封装（自动注入 X-Tenant-ID）
-│   └── .env.production             # VITE_API_BASE_URL=（留空，使用相对路径 /api）
-│
-├── web/portal/                     # 考生前台（Vue 3，端口 3001）
-│   ├── src/
-│   │   ├── views/                  # Home, ExamList, ExamDetail, ExamRoom, Login, Register, MyResults
-│   │   ├── layouts/                # PortalLayout（header + footer 统一布局）
-│   │   ├── stores/                 # Pinia（auth）
-│   │   ├── router/                 # 路由（requiresAuth 守卫，Login/Register 嵌入 PortalLayout）
-│   │   └── api/                    # Axios 封装（withTenant 标志按需注入 X-Tenant-ID）
-│   └── vite.config.js              # 开发代理 /api → http://localhost:5146
+│   ├── src/web/admin/                  # 管理后台前端（Vue 3，端口 3000）
+│   │   ├── src/
+│   │   │   ├── views/                  # Login, Dashboard, Tenants, Users, Questions, ExamPapers
+│   │   │   ├── stores/                 # Pinia（auth, tenant）
+│   │   │   ├── router/                 # 路由（角色权限守卫）
+│   │   │   └── api/                    # Axios 封装（自动注入 X-Tenant-ID）
+│   │   └── .env.production             # VITE_API_BASE_URL=（留空，使用相对路径 /api）
+│   │
+│   ├── src/web/portal/                 # 考生前台（Vue 3，端口 3001）
+│   │   ├── src/
+│   │   │   ├── views/                  # Home, ExamList, ExamDetail, ExamRoom, Login, Register, MyResults
+│   │   │   ├── layouts/                # PortalLayout（header + footer 统一布局）
+│   │   │   ├── stores/                 # Pinia（auth）
+│   │   │   ├── router/                 # 路由（requiresAuth 守卫，Login/Register 嵌入 PortalLayout）
+│   │   │   └── api/                    # Axios 封装（withTenant 标志按需注入 X-Tenant-ID）
+│   │   └── vite.config.js              # 开发代理 /api → http://localhost:5146
+│   │
+│   └── src/app/                        # 移动端 App（Ionic + Vue + Capacitor）
 │
 ├── terraform/
 │   ├── modules/                    # alb, ecr, ecs, elasticache, iam, cloudfront
@@ -157,12 +159,12 @@ dotnet run --project src/ExamSystem.API
 
 ```powershell
 # 管理后台（http://localhost:3000）
-cd web/admin
+cd src/web/admin
 npm install
 npm run dev
 
 # 考生前台（http://localhost:3001）
-cd web/portal
+cd src/web/portal
 npm install
 npm run dev
 ```
@@ -291,8 +293,8 @@ terraform apply
 | 触发路径 | 执行 Job |
 |----------|----------|
 | `src/**`, `Dockerfile`, `db/**` | Build → ECR Push → EF 迁移（`ecs run-task`）→ ECS 滚动部署 |
-| `web/admin/**` | `npm run build` → S3 sync → CloudFront 缓存失效（Admin） |
-| `web/portal/**` | `npm run build` → S3 sync → CloudFront 缓存失效（Portal） |
+| `src/web/admin/**` | `npm run build` → S3 sync → CloudFront 缓存失效（Admin） |
+| `src/web/portal/**` | `npm run build` → S3 sync → CloudFront 缓存失效（Portal） |
 
 支持 `workflow_dispatch` 手动触发，可通过 `force_backend` / `force_frontend` / `force_portal` 强制指定部署目标。
 

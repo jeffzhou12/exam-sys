@@ -1,8 +1,8 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/ExamSystem.API/ExamSystem.API.csproj" />
-    <Project Path="src/ExamSystem.Application/ExamSystem.Application.csproj" />
-    <Project Path="src/ExamSystem.Domain/ExamSystem.Domain.csproj" />
-    <Project Path="src/ExamSystem.Infrastructure/ExamSystem.Infrastructure.csproj" />
+  <Folder Name="/src/api/">
+    <Project Path="src/api/ExamSystem.API/ExamSystem.API.csproj" />
+    <Project Path="src/api/ExamSystem.Application/ExamSystem.Application.csproj" />
+    <Project Path="src/api/ExamSystem.Domain/ExamSystem.Domain.csproj" />
+    <Project Path="src/api/ExamSystem.Infrastructure/ExamSystem.Infrastructure.csproj" />
   </Folder>
 </Solution>

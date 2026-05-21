@@ -1,0 +1,51 @@
+# Copy this file to terraform.tfvars and fill in the values.
+# Never commit terraform.tfvars �?it is listed in .gitignore.
+
+aws_region  = "ap-southeast-1"
+app_name    = "exam"
+environment = "staging"
+
+# GitHub repository in "owner/repo" format
+github_repo = "YOUR_GITHUB_ORG/exam-system"
+
+# ── Networking ────────────────────────────────────────────────────────────────
+vpc_id             = "vpc-xxxxxxxxxxxxxxxxx"
+public_subnet_ids  = ["subnet-xxxxxxxxxxxxxxxxx", "subnet-yyyyyyyyyyyyyyyyy"]
+private_subnet_ids = ["subnet-zzzzzzzzzzzzzzzzz", "subnet-aaaaaaaaaaaaaaaaaa"]
+
+# ── RDS ───────────────────────────────────────────────────────────────────────
+db_host       = "database-1.ct8ym8caacv7.ap-southeast-1.rds.amazonaws.com"
+db_user       = "postgres"
+db_name       = "exam_system"
+db_secret_arn = "arn:aws:secretsmanager:ap-southeast-1:183047559773:secret:rds!db-xxxxxxxxxxxxxxxxxx"
+
+# Security group currently attached to the RDS instance
+rds_security_group_id = "sg-xxxxxxxxxxxxxxxxx"
+
+# ── Redis（ElastiCache）────────────────────────────────────────────────────────
+# Terraform 会自动创�?ElastiCache 集群并将连接串注�?ECS 任务�?
+# 如需调整节点类型或副本数，修改以下变量：
+# redis_node_type    = "cache.t3.micro"
+# redis_num_clusters = 1   # 生产建议设为 2（主 + 副本�?
+
+# ── AI 服务 ───────────────────────────────────────────────────────────────────
+# 主力：DeepSeek 官方 (https://platform.deepseek.com �?API Keys)
+# ai_primary_api_key    = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# ai_primary_base_url   = "https://api.deepseek.com/v1"
+# ai_primary_chat_model = "deepseek-chat"
+# 备用：硅基流�?(https://cloud.siliconflow.cn �?API密钥)
+# ai_fallback_api_key    = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# ai_fallback_base_url   = "https://api.siliconflow.cn/v1"
+# ai_fallback_chat_model = "deepseek-ai/DeepSeek-V3"
+
+# ── ECS ───────────────────────────────────────────────────────────────────────
+app_port      = 8080
+task_cpu      = 512   # 0.5 vCPU
+task_memory   = 1024  # MiB
+desired_count = 1
+
+# ── Resource replacement safety ───────────────────────────────────────────────
+# Rename migrations may need these values temporarily set as below.
+ecr_force_delete        = true
+alb_deletion_protection = false
+

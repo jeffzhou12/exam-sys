@@ -8,14 +8,9 @@ terraform {
     }
   }
 
-  backend "s3" {
-    bucket       = "go-web-tfstate-183047559773"
-    key          = "go-web/prod/terraform.tfstate"
-    region       = "ap-southeast-1"
-    encrypt      = true
-    use_lockfile = true
-    profile      = "go-web-deploy"
-  }
+  # backend 配置已提取到 backend.hcl，支持多环境复用：
+  #   terraform init -backend-config=backend.hcl
+  backend "s3" {}
 }
 
 provider "aws" {
