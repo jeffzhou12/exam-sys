@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'api_client.dart';
 import 'models/auth_models.dart';
 import 'models/exam_models.dart';

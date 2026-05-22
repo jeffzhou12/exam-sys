@@ -31,9 +31,11 @@ class AuthState {
       );
 }
 
-class AuthStore extends StateNotifier<AuthState> {
-  AuthStore() : super(const AuthState()) {
+class AuthStore extends Notifier<AuthState> {
+  @override
+  AuthState build() {
     _init();
+    return const AuthState();
   }
 
   Future<void> _init() async {
@@ -75,4 +77,4 @@ class AuthStore extends StateNotifier<AuthState> {
 }
 
 final authStoreProvider =
-    StateNotifierProvider<AuthStore, AuthState>((ref) => AuthStore());
+    NotifierProvider<AuthStore, AuthState>(AuthStore.new);

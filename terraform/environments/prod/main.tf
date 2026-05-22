@@ -46,6 +46,11 @@ module "iam" {
   db_secret_arn       = var.db_secret_arn
   ecr_repository_arn  = module.ecr.repository_arn
   github_repo         = var.github_repo
+  ecs_task_s3_bucket_arns = [
+    "arn:aws:s3:::exam-sys-default",
+    "arn:aws:s3:::exam-sys-books",
+    "arn:aws:s3:::exam-sys-media",
+  ]
   enable_frontend_deploy = true
   frontend_bucket_arn    = module.cloudfront.s3_bucket_arn
   portal_bucket_arn      = module.cloudfront_portal.s3_bucket_arn

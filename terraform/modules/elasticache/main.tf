@@ -64,6 +64,10 @@ resource "aws_elasticache_replication_group" "this" {
     log_type         = "slow-log"
   }
 
+  lifecycle {
+    ignore_changes = [auth_token_update_strategy]
+  }
+
   tags = merge(var.tags, { Name = "${var.name}-redis" })
 }
 

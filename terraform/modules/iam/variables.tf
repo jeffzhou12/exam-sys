@@ -42,6 +42,12 @@ variable "cloudfront_distribution_arn" {
   default     = ""
 }
 
+variable "ecs_task_s3_bucket_arns" {
+  description = "S3 bucket ARNs that ECS task role can access for application file storage"
+  type        = list(string)
+  default     = []
+}
+
 variable "tags" {
   description = "Resource tags"
   type        = map(string)

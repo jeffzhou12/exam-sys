@@ -55,7 +55,7 @@ class _ExamCard extends StatelessWidget {
         trailing: Chip(
           label: Text(_statusText(exam.status),
               style: TextStyle(color: statusColor, fontSize: 12)),
-          backgroundColor: statusColor.withOpacity(0.1),
+          backgroundColor: statusColor.withValues(alpha: 0.1),
         ),
         onTap: exam.status == 'ongoing'
             ? () => context.push('/exams/${exam.id}/room')

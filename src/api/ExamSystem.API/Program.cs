@@ -53,7 +53,7 @@ builder.Services.AddControllers()
 
             return new BadRequestObjectResult(new
             {
-                title  = "请求参数验证失败",
+                title = "请求参数验证失败",
                 status = 400,
                 errors
             });
@@ -132,6 +132,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("LocalDevCors", policy =>
+    {
+        policy
+            .SetIsOriginAllowed(origin =>
+            {
+                if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                {
+                    return false;
+                }
+
+                return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                    || uri.Host.Equals("127.0.0.1");
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 // 分层服务注册
 builder.Services.AddHttpContextAccessor(); // 供 TenantService 使用
 builder.Services.AddApplication();
@@ -172,6 +193,8 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "ExamSystem API v1");
     c.DisplayRequestDuration();
 });
+
+app.UseCors("LocalDevCors");
 
 app.UseAuthentication();
 

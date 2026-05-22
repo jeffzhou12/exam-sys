@@ -34,7 +34,7 @@ public class MediaController(IFileStorageFactory storageFactory) : ControllerBas
         // 统一返回经 API 代理的访问地址，前端直接使用此 URL 显示图片
         // 对各路径段单独编码，保留 / 分隔符，避免 %2F 在路由中无法自动解码
         var encodedKey = string.Join("/", key.Split('/').Select(Uri.EscapeDataString));
-        var url = $"{Request.Scheme}://{Request.Host}/api/media/image/{encodedKey}";
+        var url = $"/api/media/image/{encodedKey}";
         return Ok(new { url, key });
     }
 

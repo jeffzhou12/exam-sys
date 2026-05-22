@@ -166,8 +166,8 @@ public class GetBooksQueryHandler(IApplicationDbContext db)
 
     /// <summary>
     /// 将存储的封面值转换为可访问的 URL。
-    /// - 若存储的是 key（如 "covers/abc.jpg"），拼接 mediaBaseUrl 生成完整 URL。
-    /// - 若存储的是含 "/api/media/image/" 的旧完整 URL，提取 key 后用当前 baseUrl 重建，避免 hostname 失效。
+    /// - 若存储的是 key（如 "covers/abc.jpg"），返回系统内相对代理路径。
+    /// - 若存储的是含 "/api/media/image/" 的旧完整 URL，提取 key 后重建为相对路径，避免 hostname 失效。
     /// - 若存储的是外部 URL（http/https 且不含本系统 media 路径），原样返回。
     /// </summary>
     internal static string? BuildCoverUrl(string? stored, string? mediaBaseUrl)
@@ -195,9 +195,9 @@ public class GetBooksQueryHandler(IApplicationDbContext db)
 
     private static string? BuildFromKey(string key, string? mediaBaseUrl)
     {
-        if (string.IsNullOrEmpty(mediaBaseUrl)) return null;
+        _ = mediaBaseUrl;
         var encodedKey = string.Join("/", key.Split('/').Select(Uri.EscapeDataString));
-        return $"{mediaBaseUrl}/api/media/image/{encodedKey}";
+        return $"/api/media/image/{encodedKey}";
     }
 
     private static List<string> ParseTags(string? json)
@@ -331,11 +331,10 @@ public class UploadBookPdfCommandHandler(IApplicationDbContext db, IFileStorageF
                 }
                 thumbStream.Position = 0;
 
-                // 保存封面并写入 URL
+                // 仅保存存储 key，避免把内部 ALB 地址固化到数据库。
                 var coverKey = await mediaStorage.SaveAsync(
                     thumbStream, $"cover-{cmd.Id}.jpg", "covers", ct);
-                book.CoverImageUrl =
-                    $"{cmd.MediaBaseUrl}/api/media/image/{Uri.EscapeDataString(coverKey)}";
+                book.CoverImageUrl = coverKey;
             }
             catch
             {

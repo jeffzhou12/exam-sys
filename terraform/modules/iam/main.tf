@@ -56,6 +56,48 @@ resource "aws_iam_role_policy_attachment" "ecs_task_secrets" {
   policy_arn = aws_iam_policy.ecs_task_secrets.arn
 }
 
+locals {
+  ecs_task_s3_bucket_resources = compact(var.ecs_task_s3_bucket_arns)
+  ecs_task_s3_object_resources = [for arn in local.ecs_task_s3_bucket_resources : "${arn}/*"]
+}
+
+resource "aws_iam_policy" "ecs_task_s3" {
+  count       = length(local.ecs_task_s3_bucket_resources) > 0 ? 1 : 0
+  name        = "${var.name_prefix}-ecs-task-s3"
+  description = "Allow ECS task to access S3 buckets for application file storage"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "S3BucketRead"
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+        ]
+        Resource = local.ecs_task_s3_bucket_resources
+      },
+      {
+        Sid    = "S3ObjectReadWrite"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+        ]
+        Resource = local.ecs_task_s3_object_resources
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_s3" {
+  count      = length(local.ecs_task_s3_bucket_resources) > 0 ? 1 : 0
+  role       = aws_iam_role.ecs_task.name
+  policy_arn = aws_iam_policy.ecs_task_s3[0].arn
+}
+
 # ── GitHub Actions OIDC Provider ──────────────────────────────────────────────
 # Only one OIDC provider per URL is allowed per AWS account.
 # If it already exists, import it:
