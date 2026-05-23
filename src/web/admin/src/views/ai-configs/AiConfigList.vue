@@ -41,7 +41,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="providerName" label="提供商" width="120" />
-        <el-table-column prop="chatModel" label="模型" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="chatModel" label="模型" min-width="120" show-overflow-tooltip />
         <el-table-column prop="baseUrl" label="接口地址" min-width="200" show-overflow-tooltip />
         <el-table-column prop="apiKeyMasked" label="API Key" width="130" />
         <el-table-column label="月度配额" width="150">
@@ -71,7 +71,7 @@
             <span v-else>{{ row.tenantName || row.tenantId?.slice(0, 8) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="360" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" :icon="Edit" @click="openDialog(row)">编辑</el-button>
             <el-button size="small" type="warning" :icon="Refresh" @click="handleResetQuota(row)">重置配额</el-button>

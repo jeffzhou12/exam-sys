@@ -27,15 +27,34 @@ public class AiService(
     };
 
     public async Task<string> GenerateQuestionsAsync(
-        string knowledgePoint, int count, string questionType,
+        string knowledgePoint, int count, string questionType, int? difficulty = null,
         CancellationToken cancellationToken = default)
     {
+        var typeRequirement = questionType switch
+        {
+            nameof(QuestionType.SingleChoice) =>
+                "- options: 选项对象（对象，键必须是 A/B/C/D，值为选项内容）\n" +
+                "- correctAnswer: 正确答案（只能是 A/B/C/D 中一个字母）\n" +
+                "- 注意：content 只包含题干，不要把选项写进 content。\n",
+            nameof(QuestionType.MultipleChoice) =>
+                "- options: 选项对象（对象，键必须是 A/B/C/D，值为选项内容）\n" +
+                "- correctAnswer: 正确答案（多个字母连续字符串，如 AC 或 BCD，按字母升序）\n" +
+                "- 注意：content 只包含题干，不要把选项写进 content。\n",
+            nameof(QuestionType.TrueFalse) =>
+                "- correctAnswer: 正确答案（只能是 True 或 False）\n" +
+                "- options 不需要返回。\n",
+            _ => "- correctAnswer: 正确答案（字符串）\n- options 不需要返回。\n"
+        };
+
         var prompt =
-            $"你是一位专业的考试出题专家。请根据以下知识点生成 {count} 道{questionType}题目。\n" +
+            $"你是一位专业的考试出题专家。请根据以下知识点生成 {count} 道与{questionType}相关的题目。\n" +
             $"知识点：{knowledgePoint}\n\n" +
+            $"目标难度：{(difficulty.HasValue ? difficulty.Value.ToString() : "由你根据知识点自行判断，范围 1~5")}\n" +
+            "要求：如果返回 difficulty 字段，必须是 1~5 的整数；若未返回，系统将按目标难度兜底。\n\n" +
             "请以严格的 JSON 数组格式返回，每个元素包含：\n" +
             "- content: 题目内容（字符串）\n" +
-            "- correctAnswer: 正确答案（字符串）\n" +
+            typeRequirement +
+            "- difficulty: 难度系数（整数 1~5，建议返回）\n" +
             "- explanation: 解析说明（字符串，可选）\n\n" +
             "只返回 JSON 数组，不要包含任何 Markdown 代码块或额外说明。";
 

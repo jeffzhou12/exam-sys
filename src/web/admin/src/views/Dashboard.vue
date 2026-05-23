@@ -142,6 +142,38 @@
         </div>
       </el-card>
 
+      <!-- 最新消息 -->
+      <el-card shadow="never" class="data-card">
+        <template #header>
+          <div class="card-hd">
+            <span class="card-hd-title">
+              <el-icon class="hd-icon"><Message /></el-icon>最新消息
+            </span>
+            <el-button
+              v-if="auth.isAnyAdmin"
+              text
+              type="primary"
+              size="small"
+              @click="$router.push('/messages')"
+            >查看全部</el-button>
+          </div>
+        </template>
+        <div v-loading="loading.messages" class="message-list">
+          <div v-for="msg in recentMessages" :key="msg.id" class="msg-item">
+            <div class="msg-head">
+              <span class="msg-subject">{{ msg.subject || '无主题' }}</span>
+              <el-tag v-if="!msg.isRead" size="small" type="primary" effect="light">未读</el-tag>
+            </div>
+            <div class="msg-meta">
+              <span>{{ msg.senderName || '系统' }} → {{ msg.recipientName || '我' }}</span>
+              <span>{{ shortDateTime(msg.createdAt) }}</span>
+            </div>
+            <div class="msg-body">{{ msg.body }}</div>
+          </div>
+          <div v-if="!loading.messages && recentMessages.length === 0" class="empty-hint">暂无消息</div>
+        </div>
+      </el-card>
+
     </div>
 
   </div>
@@ -213,8 +245,11 @@ async function loadCounts() {
       .then(r => { counts.questions = r.totalCount ?? '-' }).catch(() => {}),
     booksApi.getList({ page: 1, pageSize: 1 })
       .then(r => { counts.books = r.totalCount ?? '-' }).catch(() => {}),
-    messagesApi.getInbox({ page: 1, pageSize: 1 })
-      .then(r => { counts.messages = r.totalCount ?? '-' }).catch(() => {}),
+    messagesApi.getAll({ page: 1, pageSize: 1 })
+      .then(r => {
+        if (Array.isArray(r)) counts.messages = r.length
+        else counts.messages = r.totalCount ?? (r.items?.length ?? '-')
+      }).catch(() => {}),
   ]
   if (auth.isAnyAdmin) {
     tasks.push(
@@ -232,10 +267,11 @@ async function loadCounts() {
 }
 
 // ── 最近记录 ──────────────────────────────────────────────────────────────────
-const loading = reactive({ papers: false, books: false, questions: false })
+const loading = reactive({ papers: false, books: false, questions: false, messages: false })
 const recentPapers    = ref([])
 const recentBooks     = ref([])
 const recentQuestions = ref([])
+const recentMessages  = ref([])
 
 async function loadRecentPapers() {
   loading.papers = true
@@ -264,6 +300,18 @@ async function loadRecentQuestions() {
   finally { loading.questions = false }
 }
 
+async function loadRecentMessages() {
+  loading.messages = true
+  try {
+    const res = await messagesApi.getAll({ page: 1, pageSize: 6 })
+    recentMessages.value = Array.isArray(res) ? res.slice(0, 6) : (res.items || [])
+  } catch {
+    recentMessages.value = []
+  } finally {
+    loading.messages = false
+  }
+}
+
 // ── 辅助格式化 ────────────────────────────────────────────────────────────────
 const statusLabel   = s => ['草稿', '已发布', '进行中', '已结束', '已取消'][s] ?? s
 const statusTagType = s => ['info', 'success', 'warning', 'default', 'danger'][s] ?? 'info'
@@ -276,11 +324,23 @@ function shortDate(val) {
   return new Date(val).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
 }
 
+function shortDateTime(val) {
+  if (!val) return '-'
+  return new Date(val).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
 onMounted(() => {
   loadCounts()
   loadRecentPapers()
   loadRecentBooks()
   loadRecentQuestions()
+  loadRecentMessages()
 })
 </script>
 
@@ -518,6 +578,46 @@ onMounted(() => {
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
+}
+
+/* ── 消息列表 ── */
+.message-list { display: flex; flex-direction: column; }
+.msg-item {
+  padding: 8px 4px;
+  border-bottom: 1px solid #f0f2f5;
+}
+.msg-item:last-child { border-bottom: none; }
+.msg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.msg-subject {
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.msg-meta {
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #909399;
+}
+.msg-body {
+  margin-top: 4px;
+  color: #606266;
+  font-size: 12px;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ── 通用空状态 ── */

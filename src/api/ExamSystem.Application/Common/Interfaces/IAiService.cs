@@ -3,7 +3,7 @@ namespace ExamSystem.Application.Common.Interfaces;
 public interface IAiService
 {
     /// <summary>根据知识点或文档内容生成题目</summary>
-    Task<string> GenerateQuestionsAsync(string knowledgePoint, int count, string questionType, CancellationToken cancellationToken = default);
+    Task<string> GenerateQuestionsAsync(string knowledgePoint, int count, string questionType, int? difficulty = null, CancellationToken cancellationToken = default);
 
     /// <summary>对简答题进行 AI 评分，返回分数和评语</summary>
     Task<AiGradingResult> GradeShortAnswerAsync(string referenceAnswer, string studentAnswer, string scoringCriteria, int maxScore, CancellationToken cancellationToken = default);

@@ -56,17 +56,20 @@
             <span class="added-time">{{ formatDate(item.addedAt) }} 加入</span>
           </div>
 
-          <div class="item-content">{{ item.content }}</div>
+          <RichContent class="item-content" :content="item.content" />
 
           <div class="item-answer">
             <div class="answer-row my-answer">
               <span class="answer-label">我的错误答案：</span>{{ item.studentAnswer || '（未作答）' }}
             </div>
             <div class="answer-row correct-answer">
-              <span class="answer-label">正确答案：</span>{{ item.correctAnswer }}
+              <span class="answer-label">正确答案：</span>
+              <RichContent class="answer-rich" :content="item.correctAnswer" />
             </div>
             <div v-if="item.explanation" class="explanation">
-              <el-icon><InfoFilled /></el-icon> 解析：{{ item.explanation }}
+              <el-icon><InfoFilled /></el-icon>
+              <span>解析：</span>
+              <RichContent class="answer-rich" :content="item.explanation" />
             </div>
           </div>
 
@@ -111,6 +114,7 @@ import { Collection, InfoFilled, ChatDotRound } from '@element-plus/icons-vue'
 import SimilarQuestions from '@/components/SimilarQuestions.vue'
 import AiExplain from '@/components/AiExplain.vue'
 import SendMessageDialog from '@/components/SendMessageDialog.vue'
+import RichContent from '@/components/RichContent.vue'
 
 const router = useRouter()
 const book = ref([])

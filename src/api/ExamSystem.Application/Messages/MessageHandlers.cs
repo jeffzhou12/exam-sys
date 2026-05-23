@@ -188,21 +188,27 @@ public record ThreadMessageDto(
 public class GetMessageThreadQueryHandler(IApplicationDbContext context)
 {
     public async Task<List<ThreadMessageDto>?> Handle(
-        Guid rootMessageId, Guid tenantId, Guid userId, CancellationToken cancellationToken = default)
+        Guid rootMessageId,
+        Guid? tenantId,
+        Guid userId,
+        bool canViewAllInTenant = false,
+        CancellationToken cancellationToken = default)
     {
-        var root = await context.Messages.AsNoTracking()
-            .FirstOrDefaultAsync(
-                m => m.Id == rootMessageId && m.TenantId == tenantId && m.ParentMessageId == null,
-                cancellationToken);
+        var rootQuery = context.Messages.AsNoTracking()
+            .Where(m => m.Id == rootMessageId && m.ParentMessageId == null);
+        if (tenantId.HasValue)
+            rootQuery = rootQuery.Where(m => m.TenantId == tenantId.Value);
+
+        var root = await rootQuery.FirstOrDefaultAsync(cancellationToken);
 
         if (root is null) return null;
 
         // 当前用户必须是这个对话的参与者
-        if (root.SenderId != userId && root.RecipientId != userId)
+        if (!canViewAllInTenant && root.SenderId != userId && root.RecipientId != userId)
             return null;
 
         var replies = await context.Messages.AsNoTracking()
-            .Where(m => m.ParentMessageId == rootMessageId && m.TenantId == tenantId)
+            .Where(m => m.ParentMessageId == rootMessageId && m.TenantId == root.TenantId)
             .OrderBy(m => m.CreatedAt)
             .ToListAsync(cancellationToken);
 
@@ -254,12 +260,18 @@ public record MessageQuestionDto(
 public class GetMessageQuestionsQueryHandler(IApplicationDbContext context)
 {
     public async Task<List<MessageQuestionDto>?> Handle(
-        Guid messageId, Guid tenantId, Guid userId, CancellationToken cancellationToken = default)
+        Guid messageId,
+        Guid? tenantId,
+        Guid userId,
+        bool canViewAllInTenant = false,
+        CancellationToken cancellationToken = default)
     {
-        var message = await context.Messages.AsNoTracking()
-            .FirstOrDefaultAsync(
-                m => m.Id == messageId && m.TenantId == tenantId,
-                cancellationToken);
+        var messageQuery = context.Messages.AsNoTracking()
+            .Where(m => m.Id == messageId);
+        if (tenantId.HasValue)
+            messageQuery = messageQuery.Where(m => m.TenantId == tenantId.Value);
+
+        var message = await messageQuery.FirstOrDefaultAsync(cancellationToken);
 
         if (message is null) return null;
 
@@ -267,11 +279,11 @@ public class GetMessageQuestionsQueryHandler(IApplicationDbContext context)
         var rootId = message.ParentMessageId ?? message.Id;
         var root = message.ParentMessageId.HasValue
             ? await context.Messages.AsNoTracking()
-                .FirstOrDefaultAsync(m => m.Id == rootId, cancellationToken)
+                .FirstOrDefaultAsync(m => m.Id == rootId && m.TenantId == message.TenantId, cancellationToken)
             : message;
 
         if (root is null) return null;
-        if (root.SenderId != userId && root.RecipientId != userId)
+        if (!canViewAllInTenant && root.SenderId != userId && root.RecipientId != userId)
             return null;
 
         if (string.IsNullOrEmpty(message.AttachedQuestionIds))
@@ -282,7 +294,7 @@ public class GetMessageQuestionsQueryHandler(IApplicationDbContext context)
             return [];
 
         var questions = await context.Questions.AsNoTracking()
-            .Where(q => questionIds.Contains(q.Id) && q.TenantId == tenantId)
+            .Where(q => questionIds.Contains(q.Id) && q.TenantId == message.TenantId)
             .ToListAsync(cancellationToken);
 
         return questions.Select(q => new MessageQuestionDto(

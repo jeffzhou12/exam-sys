@@ -59,7 +59,7 @@
           </div>
         </div>
 
-        <div class="item-content">{{ item.content }}</div>
+        <RichContent class="item-content" :content="item.content" />
 
         <div class="item-answers">
           <div class="answer-row my-answer" :class="{ correct: item.isCorrect, wrong: !item.isCorrect && item.type !== 4 }">
@@ -68,15 +68,16 @@
           </div>
           <div v-if="item.type !== 4 && !item.isCorrect" class="answer-row correct-answer">
             <span class="answer-label">正确答案：</span>
-            <span>{{ item.correctAnswer }}</span>
+            <RichContent class="answer-rich" :content="item.correctAnswer" />
           </div>
           <div v-if="item.type === 4" class="answer-row ref-answer">
             <span class="answer-label">参考答案：</span>
-            <span>{{ item.correctAnswer }}</span>
+            <RichContent class="answer-rich" :content="item.correctAnswer" />
           </div>
           <div v-if="item.explanation" class="explanation">
             <el-icon><InfoFilled /></el-icon>
-            解析：{{ item.explanation }}
+            <span>解析：</span>
+            <RichContent class="answer-rich" :content="item.explanation" />
           </div>
         </div>
 
@@ -106,6 +107,7 @@ import { ElMessage } from 'element-plus'
 import { CircleCheck, CircleClose, InfoFilled, ChatDotRound } from '@element-plus/icons-vue'
 import SimilarQuestions from '@/components/SimilarQuestions.vue'
 import SendMessageDialog from '@/components/SendMessageDialog.vue'
+import RichContent from '@/components/RichContent.vue'
 
 const router = useRouter()
 const result = ref(null)

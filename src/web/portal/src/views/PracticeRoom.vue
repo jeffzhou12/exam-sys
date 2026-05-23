@@ -54,7 +54,7 @@
             <span v-if="currentQ.knowledgePoint" class="kp-tag">{{ currentQ.knowledgePoint }}</span>
           </div>
 
-          <div class="question-content">{{ currentQ.content }}</div>
+          <RichContent class="question-content" :content="currentQ.content" />
 
           <!-- 单选题 -->
           <el-radio-group
@@ -127,10 +127,11 @@
             <template v-else-if="currentAnswer">
               <div class="answer-row">
                 <span class="answer-label">参考答案：</span>
-                <span class="answer-value">{{ currentAnswer.correctAnswer }}</span>
+                <RichContent class="answer-value" :content="currentAnswer.correctAnswer" />
               </div>
               <div v-if="currentAnswer.explanation" class="answer-explanation">
-                <span class="answer-label">解析：</span>{{ currentAnswer.explanation }}
+                <span class="answer-label">解析：</span>
+                <RichContent class="answer-value" :content="currentAnswer.explanation" />
               </div>
             </template>
             <div v-else class="answer-loading">暂无答案信息</div>
@@ -190,6 +191,7 @@ import { practiceApi } from '@/api/practice'
 import SimilarQuestions from '@/components/SimilarQuestions.vue'
 import AiExplain from '@/components/AiExplain.vue'
 import SendMessageDialog from '@/components/SendMessageDialog.vue'
+import RichContent from '@/components/RichContent.vue'
 
 const router = useRouter()
 const questions = ref([])

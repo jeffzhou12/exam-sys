@@ -24,10 +24,11 @@ public class QuestionConfiguration : IEntityTypeConfiguration<Question>
     {
         builder.ToTable("questions");
         builder.HasKey(q => q.Id);
-        builder.Property(q => q.Content).IsRequired();
+        builder.Property(q => q.Content).HasColumnType("text").IsRequired();
         // Options 使用 JSONB 类型
         builder.Property(q => q.Options).HasColumnType("jsonb");
-        builder.Property(q => q.CorrectAnswer).HasMaxLength(2000).IsRequired();
+        builder.Property(q => q.CorrectAnswer).HasColumnType("text").IsRequired();
+        builder.Property(q => q.Explanation).HasColumnType("text");
         builder.HasOne(q => q.Tenant).WithMany(t => t.Questions).HasForeignKey(q => q.TenantId);
         builder.HasIndex(q => new { q.TenantId, q.IsActive });
     }

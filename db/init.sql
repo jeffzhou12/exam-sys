@@ -58,10 +58,10 @@ CREATE TABLE questions (
     id               UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id        UUID         NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     type             SMALLINT     NOT NULL, -- 1=单选 2=多选 3=判断 4=简答
-    content          VARCHAR(4000) NOT NULL,
+    content          TEXT         NOT NULL,
     options          JSONB,                 -- 选项（单/多选题）
-    correct_answer   VARCHAR(2000) NOT NULL,
-    explanation      VARCHAR(2000),
+    correct_answer   TEXT         NOT NULL,
+    explanation      TEXT,
     knowledge_point  VARCHAR(500),
     difficulty       SMALLINT     NOT NULL DEFAULT 1 CHECK (difficulty BETWEEN 1 AND 5),
     is_ai_generated  BOOLEAN      NOT NULL DEFAULT FALSE,

@@ -116,10 +116,21 @@ public class QuestionsController(
         CancellationToken cancellationToken = default)
     {
         var tenantId = tenantService.GetCurrentTenantId();
+        var typeConfigs = request.TypeConfigs is { Count: > 0 }
+            ? request.TypeConfigs.Select(t => new AiTypeConfig(t.Type, t.Count, t.Difficulty, t.KnowledgePoint)).ToList()
+            : [
+                new AiTypeConfig(
+                    request.QuestionType ?? throw new InvalidOperationException("请至少配置一种题型。"),
+                    request.Count ?? 5,
+                    request.Difficulty ?? 3,
+                    request.KnowledgePoint)
+            ];
+
         var count = await generateQuestionsHandler.Handle(
             new GenerateQuestionsWithAiCommand(
                 tenantId ?? throw new InvalidOperationException("请先选择租户。"),
-                request.KnowledgePoint, request.QuestionType, request.Count),
+                request.KnowledgePoint,
+                typeConfigs),
             cancellationToken);
 
         return Ok(new { generated = count });
@@ -136,7 +147,7 @@ public class QuestionsController(
         var result = await previewAiHandler.Handle(
             new PreviewAiQuestionsCommand(
                 request.KnowledgePoint,
-                request.TypeConfigs.Select(t => new AiTypeConfig(t.Type, t.Count, t.Difficulty)).ToList()),
+                request.TypeConfigs.Select(t => new AiTypeConfig(t.Type, t.Count, t.Difficulty, t.KnowledgePoint)).ToList()),
             cancellationToken);
         return Ok(result);
     }
@@ -181,15 +192,17 @@ public record UpdateQuestionRequest(
     int Difficulty = 1);
 
 public record GenerateQuestionsRequest(
-    string KnowledgePoint,
-    QuestionType QuestionType,
-    int Count = 5);
+    string? KnowledgePoint,
+    QuestionType? QuestionType,
+    int? Count,
+    int? Difficulty,
+    List<AiTypeConfigRequest>? TypeConfigs);
 
 public record PreviewAiQuestionsRequest(
     string KnowledgePoint,
     List<AiTypeConfigRequest> TypeConfigs);
 
-public record AiTypeConfigRequest(QuestionType Type, int Count, int Difficulty = 3);
+public record AiTypeConfigRequest(QuestionType Type, int Count, int Difficulty = 3, string? KnowledgePoint = null);
 
 public record BatchCreateQuestionsRequest(List<BatchQuestionItemRequest> Questions);
 

@@ -3,6 +3,7 @@ using ExamSystem.Application.Common.Models;
 using ExamSystem.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using System.Text.Json;
 
 namespace ExamSystem.Application.Questions.Queries;
 
@@ -18,6 +19,7 @@ public record QuestionDto(
     Guid Id,
     QuestionType Type,
     string Content,
+    JsonDocument? Options,
     string? KnowledgePoint,
     int Difficulty,
     bool IsAiGenerated,
@@ -55,7 +57,7 @@ public class GetQuestionsQueryHandler(
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
             .Select(x => new QuestionDto(
-                x.Id, x.Type, x.Content, x.KnowledgePoint,
+                x.Id, x.Type, x.Content, x.Options, x.KnowledgePoint,
                 x.Difficulty, x.IsAiGenerated, x.CreatedAt, x.TenantId))
             .ToListAsync(cancellationToken);
 

@@ -70,14 +70,16 @@ html.dark .el-dialog {
   background: #1f1f1f;
 }
 html.dark .el-dialog__header {
-  background: linear-gradient(135deg, #262626, #1f1f1f) !important;
+  background: #1f1f1f !important;
+  border-bottom: 1px solid #303030 !important;
   border-bottom-color: #303030 !important;
 }
 html.dark .el-dialog__title {
   color: rgba(255,255,255,0.85) !important;
 }
 html.dark .el-dialog__footer {
-  background: #1a1a1a !important;
+  background: #1f1f1f !important;
+  border-top: 1px solid #303030 !important;
   border-top-color: #303030 !important;
 }
 
@@ -262,6 +264,18 @@ html.dark .q-item {
 }
 html.dark .q-content {
   color: rgba(255,255,255,0.75) !important;
+}
+html.dark .msg-item {
+  border-bottom-color: #303030 !important;
+}
+html.dark .msg-subject {
+  color: rgba(255,255,255,0.88) !important;
+}
+html.dark .msg-meta {
+  color: rgba(255,255,255,0.45) !important;
+}
+html.dark .msg-body {
+  color: rgba(255,255,255,0.62) !important;
 }
 html.dark .empty-hint {
   color: rgba(255,255,255,0.3) !important;

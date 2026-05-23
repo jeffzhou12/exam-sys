@@ -22,6 +22,7 @@ public class MessagesController(
 {
     private Guid? TenantId => tenantService.GetCurrentTenantId();
     private bool IsSuperAdmin => User.IsInRole(Roles.SuperAdmin);
+    private bool IsAnyAdmin => IsSuperAdmin || User.IsInRole(Roles.Admin);
 
     private Guid? UserId =>
         Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
@@ -132,7 +133,12 @@ public class MessagesController(
         if (!IsSuperAdmin && TenantId is null)
             return BadRequest(new { error = "无法确定租户信息。" });
 
-        var thread = await getThreadHandler.Handle(id, TenantId!.Value, UserId.Value, cancellationToken);
+        var thread = await getThreadHandler.Handle(
+            id,
+            IsSuperAdmin ? null : TenantId,
+            UserId.Value,
+            IsAnyAdmin,
+            cancellationToken);
         if (thread is null) return Forbid();
         return Ok(thread);
     }
@@ -146,7 +152,12 @@ public class MessagesController(
         if (!IsSuperAdmin && TenantId is null)
             return BadRequest(new { error = "无法确定租户信息。" });
 
-        var questions = await getQuestionsHandler.Handle(id, TenantId!.Value, UserId.Value, cancellationToken);
+        var questions = await getQuestionsHandler.Handle(
+            id,
+            IsSuperAdmin ? null : TenantId,
+            UserId.Value,
+            IsAnyAdmin,
+            cancellationToken);
         if (questions is null) return Forbid();
         return Ok(questions);
     }

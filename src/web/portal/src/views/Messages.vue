@@ -78,7 +78,7 @@
                           <el-tag size="small" type="info" effect="plain">难度 {{ q.difficulty }}</el-tag>
                           <span v-if="q.knowledgePoint" class="knowledge-point">{{ q.knowledgePoint }}</span>
                         </div>
-                        <div class="bq-content">{{ q.content }}</div>
+                        <RichContent class="bq-content" :content="q.content" />
                         <div v-if="q.options?.length" class="bq-options">
                           <div
                             v-for="(opt, idx) in q.options"
@@ -89,10 +89,12 @@
                           </div>
                         </div>
                         <div v-if="q.answer" class="bq-answer">
-                          <strong>参考答案：</strong>{{ q.answer }}
+                          <strong>参考答案：</strong>
+                          <RichContent class="bq-rich" :content="q.answer" />
                         </div>
                         <div v-if="q.explanation" class="bq-explanation">
-                          <strong>解析：</strong>{{ q.explanation }}
+                          <strong>解析：</strong>
+                          <RichContent class="bq-rich" :content="q.explanation" />
                         </div>
                       </div>
                     </div>
@@ -147,6 +149,7 @@ import { Message, EditPen, Files } from '@element-plus/icons-vue'
 import { messagesApi } from '@/api/messages'
 import { useAuthStore } from '@/stores/auth'
 import SendMessageDialog from '@/components/SendMessageDialog.vue'
+import RichContent from '@/components/RichContent.vue'
 
 const authStore = useAuthStore()
 const myUserId = computed(() => authStore.user?.id)

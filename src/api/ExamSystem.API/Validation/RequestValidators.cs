@@ -78,17 +78,17 @@ public class CreateQuestionRequestValidator : AbstractValidator<CreateQuestionRe
     {
         RuleFor(x => x.Content)
             .NotEmpty().WithMessage("题目内容不能为空。")
-            .MaximumLength(4000).WithMessage("题目内容最长 4000 个字符。");
+            .MaximumLength(100000).WithMessage("题目内容最长 100000 个字符。");
 
         RuleFor(x => x.CorrectAnswer)
             .NotEmpty().WithMessage("正确答案不能为空。")
-            .MaximumLength(2000).WithMessage("正确答案最长 2000 个字符。");
+            .MaximumLength(100000).WithMessage("正确答案最长 100000 个字符。");
 
         RuleFor(x => x.Difficulty)
             .InclusiveBetween(1, 5).WithMessage("难度系数必须在 1~5 之间。");
 
         RuleFor(x => x.Explanation)
-            .MaximumLength(2000).WithMessage("解析最长 2000 个字符。")
+            .MaximumLength(100000).WithMessage("解析最长 100000 个字符。")
             .When(x => !string.IsNullOrWhiteSpace(x.Explanation));
 
         RuleFor(x => x.KnowledgePoint)
@@ -108,17 +108,17 @@ public class UpdateQuestionRequestValidator : AbstractValidator<UpdateQuestionRe
     {
         RuleFor(x => x.Content)
             .NotEmpty().WithMessage("题目内容不能为空。")
-            .MaximumLength(4000).WithMessage("题目内容最长 4000 个字符。");
+            .MaximumLength(100000).WithMessage("题目内容最长 100000 个字符。");
 
         RuleFor(x => x.CorrectAnswer)
             .NotEmpty().WithMessage("正确答案不能为空。")
-            .MaximumLength(2000).WithMessage("正确答案最长 2000 个字符。");
+            .MaximumLength(100000).WithMessage("正确答案最长 100000 个字符。");
 
         RuleFor(x => x.Difficulty)
             .InclusiveBetween(1, 5).WithMessage("难度系数必须在 1~5 之间。");
 
         RuleFor(x => x.Explanation)
-            .MaximumLength(2000).WithMessage("解析最长 2000 个字符。")
+            .MaximumLength(100000).WithMessage("解析最长 100000 个字符。")
             .When(x => !string.IsNullOrWhiteSpace(x.Explanation));
 
         RuleFor(x => x.KnowledgePoint)
@@ -132,11 +132,59 @@ public class GenerateQuestionsRequestValidator : AbstractValidator<GenerateQuest
     public GenerateQuestionsRequestValidator()
     {
         RuleFor(x => x.KnowledgePoint)
-            .NotEmpty().WithMessage("知识点不能为空。")
-            .MaximumLength(500).WithMessage("知识点最长 500 个字符。");
+            .MaximumLength(500).WithMessage("知识点最长 500 个字符。")
+            .When(x => !string.IsNullOrWhiteSpace(x.KnowledgePoint));
 
-        RuleFor(x => x.Count)
-            .InclusiveBetween(1, 50).WithMessage("生成数量必须在 1~50 之间。");
+        RuleFor(x => x)
+            .Must(x =>
+                (x.TypeConfigs is { Count: > 0 }) ||
+                (x.QuestionType.HasValue && x.Count.HasValue))
+            .WithMessage("请配置题型与数量，或使用 TypeConfigs 批量配置。")
+            .Must(x =>
+            {
+                if (x.TypeConfigs is not { Count: > 0 })
+                    return !string.IsNullOrWhiteSpace(x.KnowledgePoint);
+
+                return x.TypeConfigs.All(t =>
+                    !string.IsNullOrWhiteSpace(t.KnowledgePoint) || !string.IsNullOrWhiteSpace(x.KnowledgePoint));
+            })
+            .WithMessage("请为每个配置项填写知识点，或提供全局知识点。")
+            .Must(x =>
+            {
+                if (x.TypeConfigs is not { Count: > 0 })
+                    return true;
+                var total = x.TypeConfigs.Sum(t => t.Count);
+                return total is >= 1 and <= 100;
+            })
+            .WithMessage("题目总数必须在 1~100 之间。")
+            .Must(x =>
+            {
+                if (x.TypeConfigs is not { Count: > 0 })
+                    return true;
+                return x.TypeConfigs.All(t => t.Count is >= 1 and <= 50 && t.Difficulty is >= 1 and <= 5);
+            })
+            .WithMessage("每个配置项的数量必须在 1~50，难度必须在 1~5。")
+            .Must(x =>
+            {
+                if (x.TypeConfigs is not { Count: > 0 })
+                    return true;
+                return x.TypeConfigs.All(t => string.IsNullOrWhiteSpace(t.KnowledgePoint) || t.KnowledgePoint!.Length <= 500);
+            })
+            .WithMessage("每个配置项的知识点最长 500 个字符。")
+            .Must(x =>
+            {
+                if (x.TypeConfigs is { Count: > 0 })
+                    return true;
+                return x.Count is >= 1 and <= 50;
+            })
+            .WithMessage("生成数量必须在 1~50 之间。")
+            .Must(x =>
+            {
+                if (x.TypeConfigs is { Count: > 0 })
+                    return true;
+                return !x.Difficulty.HasValue || x.Difficulty.Value is >= 1 and <= 5;
+            })
+            .WithMessage("难度系数必须在 1~5 之间。");
     }
 }
 
@@ -159,6 +207,9 @@ public class PreviewAiQuestionsRequestValidator : AbstractValidator<PreviewAiQue
                .InclusiveBetween(1, 50).WithMessage("单种题型生成数量必须在 1~50 之间。");
             cfg.RuleFor(c => c.Difficulty)
                .InclusiveBetween(1, 5).WithMessage("难度系数必须在 1~5 之间。");
+                cfg.RuleFor(c => c.KnowledgePoint)
+                    .MaximumLength(500).WithMessage("知识点最长 500 个字符。")
+                    .When(c => !string.IsNullOrWhiteSpace(c.KnowledgePoint));
         });
     }
 }

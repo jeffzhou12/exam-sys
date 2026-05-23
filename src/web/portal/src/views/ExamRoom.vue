@@ -61,7 +61,7 @@
           </div>
 
           <!-- 题目内容 -->
-          <div class="q-content">{{ currentQuestion.content }}</div>
+          <RichContent class="q-content" :content="currentQuestion.content" />
 
           <!-- 答题区 -->
           <div class="q-answer">
@@ -149,6 +149,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { examsApi } from '@/api/exams'
 import { Loading, AlarmClock, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import RichContent from '@/components/RichContent.vue'
 
 const route = useRoute()
 const router = useRouter()
