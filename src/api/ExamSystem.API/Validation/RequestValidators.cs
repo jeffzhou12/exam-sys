@@ -10,14 +10,18 @@ public class LoginRequestValidator : AbstractValidator<LoginRequest>
 {
     public LoginRequestValidator()
     {
-        RuleFor(x => x.Username)
-            .NotEmpty().WithMessage("用户名不能为空。")
-            .MaximumLength(100).WithMessage("用户名最长 100 个字符。");
+        RuleFor(x => x.Identifier)
+            .NotEmpty().WithMessage("登录标识不能为空。")
+            .MaximumLength(100).WithMessage("登录标识最长 100 个字符。");
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("密码不能为空。")
             .MinimumLength(6).WithMessage("密码长度至少 6 位。")
             .MaximumLength(128).WithMessage("密码最长 128 个字符。");
+
+        RuleFor(x => x.CaptchaToken)
+            .MaximumLength(4000).WithMessage("人机校验令牌长度异常。")
+            .When(x => !string.IsNullOrWhiteSpace(x.CaptchaToken));
     }
 }
 
@@ -41,6 +45,10 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .EmailAddress().WithMessage("邮箱格式不正确。")
             .MaximumLength(320).WithMessage("邮箱最长 320 个字符。")
             .When(x => !string.IsNullOrWhiteSpace(x.Email));
+
+        RuleFor(x => x.CaptchaToken)
+            .MaximumLength(4000).WithMessage("人机校验令牌长度异常。")
+            .When(x => !string.IsNullOrWhiteSpace(x.CaptchaToken));
     }
 }
 
@@ -48,8 +56,8 @@ public class ForgotPasswordRequestValidator : AbstractValidator<ForgotPasswordRe
 {
     public ForgotPasswordRequestValidator()
     {
-        RuleFor(x => x.UsernameOrEmail)
-            .NotEmpty().WithMessage("用户名或邮箱不能为空。")
+        RuleFor(x => x.Identifier)
+            .NotEmpty().WithMessage("用户名、邮箱或手机号不能为空。")
             .MaximumLength(320).WithMessage("输入长度不能超过 320 个字符。");
     }
 }

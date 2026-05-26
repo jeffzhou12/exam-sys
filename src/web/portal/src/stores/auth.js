@@ -32,13 +32,17 @@ export const useAuthStore = defineStore('exam-auth', () => {
   const isTeacher    = computed(() => role.value === 'Teacher')
   const isStudent    = computed(() => role.value === 'Student')
 
-  async function login(username, password) {
-    const result = await authApi.login({ username, password })
+  async function login(identifier, password, captchaToken = null) {
+    const result = await authApi.login({ identifier, password, captchaToken })
+    return loginWithResult(result)
+  }
+
+  function loginWithResult(result) {
     token.value = result.accessToken
     const payload = parseJwt(result.accessToken)
     user.value = {
       id:       payload?.sub || '',
-      username: result.username || payload?.unique_name || username,
+      username: result.username || payload?.unique_name || '',
       role:     result.role || payload?.role || '',
       tenantId: payload?.tenant_id || null,
     }
@@ -82,6 +86,6 @@ export const useAuthStore = defineStore('exam-auth', () => {
     token, user, isLoggedIn, tenantId, role,
     isSuperAdmin, isAdmin, isAnyAdmin, isTeacher, isStudent,
     activeTenantId, activeTenantName,
-    login, logout, setActiveTenant,
+    login, loginWithResult, logout, setActiveTenant,
   }
 })

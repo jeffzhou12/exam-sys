@@ -29,10 +29,14 @@ request.interceptors.response.use(
       localStorage.removeItem('exam-activeTenantId')
       router.push('/login')
       ElMessage.error('请先登录')
+    } else if (status === 429) {
+      ElMessage.error(err.response?.data?.detail || '请求过于频繁，请稍后重试')
     } else if (status === 403) {
       ElMessage.error('无权限访问')
     } else if (err.response?.data?.error) {
       ElMessage.error(err.response.data.error)
+    } else if (err.response?.data?.detail) {
+      ElMessage.error(err.response.data.detail)
     } else {
       ElMessage.error('网络请求失败，请稍后重试')
     }

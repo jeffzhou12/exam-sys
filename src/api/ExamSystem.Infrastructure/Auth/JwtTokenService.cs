@@ -9,7 +9,7 @@ namespace ExamSystem.Infrastructure.Auth;
 
 public class JwtTokenService(JwtSettings settings) : IJwtTokenService
 {
-    public string GenerateToken(Guid userId, string username, string role, Guid? tenantId)
+    public string GenerateToken(Guid userId, string displayName, string role, Guid? tenantId)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -19,7 +19,7 @@ public class JwtTokenService(JwtSettings settings) : IJwtTokenService
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim(ClaimTypes.Name, username),
+            new Claim(ClaimTypes.Name, displayName),
             new Claim(ClaimTypes.Role, role),
         };
 

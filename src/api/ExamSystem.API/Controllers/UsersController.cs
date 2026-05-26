@@ -65,7 +65,19 @@ public class UsersController(
         CancellationToken cancellationToken = default)
     {
         var id = await createUserHandler.Handle(
-            new CreateUserCommand(request.TenantId, request.Username, request.Password, request.Email, request.Role),
+            new CreateUserCommand(
+                request.TenantId,
+                request.Username,
+                request.Password,
+                request.Email,
+                request.PhoneNumber,
+                request.Nickname,
+                request.AvatarUrl,
+                request.Gender,
+                request.Address,
+                request.WeChatOpenId,
+                request.WeChatUnionId,
+                request.Role),
             cancellationToken);
         return CreatedAtAction(nameof(GetUser), new { id }, new { id });
     }
@@ -85,7 +97,18 @@ public class UsersController(
         var tenantId = string.Equals(userRole, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase)
             ? request.TenantId
             : null;
-        await updateUserHandler.Handle(new UpdateUserCommand(id, request.Email, request.Role, tenantId), cancellationToken);
+        await updateUserHandler.Handle(new UpdateUserCommand(
+            id,
+            request.Email,
+            request.PhoneNumber,
+            request.Nickname,
+            request.AvatarUrl,
+            request.Gender,
+            request.Address,
+            request.WeChatOpenId,
+            request.WeChatUnionId,
+            request.Role,
+            tenantId), cancellationToken);
         return NoContent();
     }
 
@@ -117,6 +140,28 @@ public class UsersController(
     }
 }
 
-public record CreateUserRequest(Guid? TenantId, string Username, string Password, string? Email, UserRole Role);
-public record UpdateUserRequest(string? Email, UserRole Role, Guid? TenantId = null);
+public record CreateUserRequest(
+    Guid? TenantId,
+    string Username,
+    string Password,
+    string? Email,
+    string? PhoneNumber,
+    string? Nickname,
+    string? AvatarUrl,
+    string? Gender,
+    string? Address,
+    string? WeChatOpenId,
+    string? WeChatUnionId,
+    UserRole Role);
+public record UpdateUserRequest(
+    string? Email,
+    string? PhoneNumber,
+    string? Nickname,
+    string? AvatarUrl,
+    string? Gender,
+    string? Address,
+    string? WeChatOpenId,
+    string? WeChatUnionId,
+    UserRole? Role,
+    Guid? TenantId = null);
 public record AdminResetPasswordRequest(string NewPassword);

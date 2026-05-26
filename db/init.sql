@@ -199,8 +199,15 @@ CREATE TABLE users (
     id               UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id        UUID         REFERENCES tenants(id) ON DELETE CASCADE,   -- NULL 表示系统级管理员
     username         VARCHAR(100) NOT NULL,
+    nickname         VARCHAR(100),
+    avatar_url       VARCHAR(1000),
     password_hash    VARCHAR(512) NOT NULL,
     email            VARCHAR(320),
+    phone_number     VARCHAR(30),
+    wechat_openid    VARCHAR(100),
+    wechat_unionid   VARCHAR(100),
+    gender           VARCHAR(20),
+    address          VARCHAR(500),
     role             VARCHAR(50)  NOT NULL DEFAULT 'Student', -- Admin | Teacher | Student
     is_active        BOOLEAN      NOT NULL DEFAULT TRUE,
     last_login_at    TIMESTAMPTZ,
@@ -210,6 +217,10 @@ CREATE TABLE users (
     UNIQUE (tenant_id, username)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS ux_users_tenant_email       ON users(tenant_id, email) WHERE email IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_users_tenant_phone       ON users(tenant_id, phone_number) WHERE phone_number IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_users_tenant_wechat_id   ON users(tenant_id, wechat_openid) WHERE wechat_openid IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_users_tenant_wechat_uid  ON users(tenant_id, wechat_unionid) WHERE wechat_unionid IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_users_tenant_active ON users(tenant_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_users_role          ON users(tenant_id, role);
 

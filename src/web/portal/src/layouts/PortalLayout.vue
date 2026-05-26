@@ -37,7 +37,6 @@
             错题本
           </router-link>
           <router-link
-            v-if="auth.isLoggedIn"
             to="/books"
             :class="{ active: $route.name === 'BookList' }">
             图书馆

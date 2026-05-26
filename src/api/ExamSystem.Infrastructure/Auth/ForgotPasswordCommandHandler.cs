@@ -24,11 +24,18 @@ public class ForgotPasswordCommandHandler(
         // 防止用户枚举：无论用户是否存在都返回相同消息
         const string genericMessage = "若该账号存在，重置链接已发送至注册邮箱，请在 30 分钟内使用。";
 
+        var identifier = command.Identifier.Trim();
+        var normalizedIdentifier = identifier.ToLower();
+
         var user = await dbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u =>
-                (u.Username == command.UsernameOrEmail || u.Email == command.UsernameOrEmail)
-                && u.IsActive,
+                u.IsActive &&
+                u.Username == identifier
+                || (u.Email != null && u.Email.ToLower() == normalizedIdentifier)
+                || u.PhoneNumber == identifier
+                || u.WeChatOpenId == identifier
+                || u.WeChatUnionId == identifier,
                 cancellationToken);
 
         if (user is null)

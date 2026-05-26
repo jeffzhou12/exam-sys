@@ -16,10 +16,21 @@ public class LoginCommandHandler(
 
     public async Task<LoginResult?> HandleAsync(LoginCommand command, CancellationToken cancellationToken = default)
     {
-        // 系统级管理员（tenant_id = NULL）和普通用户均可登录
+        var identifier = command.Identifier.Trim();
+        var normalizedIdentifier = identifier.ToLower();
+
+        // 支持用户名、邮箱、手机号、微信 openid / unionid 登录
         var user = await dbContext.Users
-            .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Username == command.Username && u.IsActive, cancellationToken);
+            .FirstOrDefaultAsync(u =>
+                u.IsActive &&
+                (
+                    u.Username == identifier ||
+                    (u.Email != null && u.Email.ToLower() == normalizedIdentifier) ||
+                    u.PhoneNumber == identifier ||
+                    u.WeChatOpenId == identifier ||
+                    u.WeChatUnionId == identifier
+                ),
+                cancellationToken);
 
         if (user is null)
             return null;
@@ -28,14 +39,19 @@ public class LoginCommandHandler(
         if (result == PasswordVerificationResult.Failed)
             return null;
 
+        user.LastLoginAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
         var role = user.Role.ToString();
-        var token = jwtTokenService.GenerateToken(user.Id, user.Username, role, user.TenantId);
+        var displayName = user.Nickname ?? user.Username;
+        var token = jwtTokenService.GenerateToken(user.Id, displayName, role, user.TenantId);
 
         return new LoginResult(
             AccessToken: token,
             TokenType: "Bearer",
             ExpiresIn: jwtSettings.ExpirationMinutes * 60,
             Username: user.Username,
+            DisplayName: displayName,
             Role: role);
     }
 }

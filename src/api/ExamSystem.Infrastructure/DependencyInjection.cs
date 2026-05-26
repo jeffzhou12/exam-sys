@@ -60,8 +60,31 @@ public static class DependencyInjection
 
         services.AddSingleton<ICacheService, ResilientCacheService>();
 
+        // ── 认证防护（滑动验证码 + 请求限流）────────────────────────────────
+        var authProtectionSettings = configuration.GetSection("AuthProtection").Get<AuthProtectionSettings>() ?? new AuthProtectionSettings();
+        authProtectionSettings.Captcha.Enabled = bool.TryParse(Environment.GetEnvironmentVariable("CAPTCHA__ENABLED"), out var captchaEnabled)
+            ? captchaEnabled
+            : authProtectionSettings.Captcha.Enabled;
+        services.AddSingleton(authProtectionSettings);
+
+        // ── Twilio 短信 ────────────────────────────────────────────────────────
+        var smsSettings = configuration.GetSection("TwilioSms").Get<TwilioSmsSettings>() ?? new TwilioSmsSettings();
+        smsSettings.AccountSid = Environment.GetEnvironmentVariable("TWILIO_SMS__ACCOUNT_SID")
+            ?? Environment.GetEnvironmentVariable("TWILIO_ACCOUNT_SID")
+            ?? smsSettings.AccountSid;
+        smsSettings.AuthToken = Environment.GetEnvironmentVariable("TWILIO_SMS__AUTH_TOKEN")
+            ?? Environment.GetEnvironmentVariable("TWILIO_AUTH_TOKEN")
+            ?? smsSettings.AuthToken;
+        smsSettings.FromPhoneNumber = Environment.GetEnvironmentVariable("TWILIO_SMS__FROM_PHONE_NUMBER")
+            ?? smsSettings.FromPhoneNumber;
+        smsSettings.MessagingServiceSid = Environment.GetEnvironmentVariable("TWILIO_SMS__MESSAGING_SERVICE_SID")
+            ?? smsSettings.MessagingServiceSid;
+        services.AddSingleton(smsSettings);
+
         // ── 多租户 ─────────────────────────────────────────────────────────────
         services.AddScoped<ITenantService, TenantService>();
+        services.AddScoped<IAuthProtectionService, AuthProtectionService>();
+        services.AddScoped<ISlidingCaptchaService, SlidingCaptchaService>();
 
         // ── JWT ────────────────────────────────────────────────────────────────
         var jwtSettings = configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
@@ -76,6 +99,10 @@ public static class DependencyInjection
         services.AddScoped<RegisterCommandHandler>();
         services.AddScoped<ForgotPasswordCommandHandler>();
         services.AddScoped<ResetPasswordCommandHandler>();
+        services.AddScoped<ISmsTemplateService, SmsTemplateService>();
+        services.AddScoped<ISmsSender, TwilioSmsSender>();
+        services.AddScoped<IVerificationCodeService, VerificationCodeService>();
+        services.AddScoped<VerifyCodeLoginCommandHandler>();
 
         // ── AI 服务（动态配置，由管理员通过 API 配置不同场景的模型）──────────────
         services.AddScoped<IAiModelConfigService, AiModelConfigService>();

@@ -89,6 +89,13 @@ public static class DependencyInjection
         services.AddScoped<AiConfigs.DeleteAiModelConfigCommandHandler>();
         services.AddScoped<AiConfigs.ResetAiModelConfigQuotaCommandHandler>();
 
+        // 短信模板管理
+        services.AddScoped<SmsTemplates.GetSmsTemplatesQueryHandler>();
+        services.AddScoped<SmsTemplates.GetSmsTemplateByIdQueryHandler>();
+        services.AddScoped<SmsTemplates.CreateSmsTemplateCommandHandler>();
+        services.AddScoped<SmsTemplates.UpdateSmsTemplateCommandHandler>();
+        services.AddScoped<SmsTemplates.DeleteSmsTemplateCommandHandler>();
+
         return services;
     }
 }

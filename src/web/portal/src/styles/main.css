@@ -46,9 +46,6 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
-/* ── Google Fonts 引入 ───────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap');
-
 /* ── 重置 ────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;

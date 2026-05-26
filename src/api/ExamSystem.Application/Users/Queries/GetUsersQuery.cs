@@ -18,7 +18,14 @@ public record UserDto(
     Guid? TenantId,
     string? TenantName,
     string Username,
+    string? Nickname,
+    string? AvatarUrl,
     string? Email,
+    string? PhoneNumber,
+    string? Gender,
+    string? Address,
+    string? WeChatOpenId,
+    string? WeChatUnionId,
     UserRole Role,
     bool IsActive,
     DateTime? LastLoginAt,
@@ -47,7 +54,9 @@ public class GetUsersQueryHandler(IApplicationDbContext context)
         {
             var search = query.Search.Trim().ToLower();
             q = q.Where(u => u.Username.ToLower().Contains(search)
-                           || (u.Email != null && u.Email.ToLower().Contains(search)));
+                           || (u.Nickname != null && u.Nickname.ToLower().Contains(search))
+                           || (u.Email != null && u.Email.ToLower().Contains(search))
+                           || (u.PhoneNumber != null && u.PhoneNumber.ToLower().Contains(search)));
         }
 
         var totalCount = await q.LongCountAsync(cancellationToken);
@@ -58,7 +67,8 @@ public class GetUsersQueryHandler(IApplicationDbContext context)
             .Take(query.PageSize)
             .Select(u => new UserDto(
                 u.Id, u.TenantId, u.Tenant != null ? u.Tenant.Name : null,
-                u.Username, u.Email, u.Role, u.IsActive, u.LastLoginAt, u.CreatedAt))
+                u.Username, u.Nickname, u.AvatarUrl, u.Email, u.PhoneNumber, u.Gender, u.Address, u.WeChatOpenId, u.WeChatUnionId,
+                u.Role, u.IsActive, u.LastLoginAt, u.CreatedAt))
             .ToListAsync(cancellationToken);
 
         return PaginatedResult<UserDto>.Create(items, query.Page, query.PageSize, totalCount);

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../features/auth/screens/login_screen.dart';
+import '../features/auth/screens/register_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/exam/screens/exam_list_screen.dart';
 import '../features/exam/screens/exam_room_screen.dart';
@@ -17,16 +18,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/home',
     redirect: (context, state) {
       final isLoggedIn = authState.token != null;
-      final isOnLogin = state.matchedLocation == '/login';
+      final loc = state.matchedLocation;
 
-      if (!isLoggedIn && !isOnLogin) return '/login';
-      if (isLoggedIn && isOnLogin) return '/home';
+      // 已登录用户访问登录/注册页直接跳首页
+      if (isLoggedIn && (loc == '/login' || loc == '/register')) {
+        return '/home';
+      }
+      // 需要强制登录的页面
+      const protected = ['/messages', '/profile'];
+      if (!isLoggedIn && protected.any((p) => loc.startsWith(p))) {
+        return '/login?redirect=${Uri.encodeComponent(loc)}';
+      }
       return null;
     },
     routes: [
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),

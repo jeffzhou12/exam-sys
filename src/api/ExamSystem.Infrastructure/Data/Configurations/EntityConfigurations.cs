@@ -87,8 +87,15 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.ToTable("users");
         builder.HasKey(u => u.Id);
         builder.Property(u => u.Username).HasMaxLength(100).IsRequired();
+        builder.Property(u => u.Nickname).HasMaxLength(100);
+        builder.Property(u => u.AvatarUrl).HasMaxLength(1000);
         builder.Property(u => u.PasswordHash).HasMaxLength(512).IsRequired();
         builder.Property(u => u.Email).HasMaxLength(320);
+        builder.Property(u => u.PhoneNumber).HasMaxLength(30);
+        builder.Property(u => u.WeChatOpenId).HasMaxLength(100).HasColumnName("wechat_openid");
+        builder.Property(u => u.WeChatUnionId).HasMaxLength(100).HasColumnName("wechat_unionid");
+        builder.Property(u => u.Gender).HasMaxLength(20);
+        builder.Property(u => u.Address).HasMaxLength(500);
         builder.Property(u => u.Role)
             .HasConversion(
                 v => v.ToString(),
@@ -96,6 +103,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(50);
         // 同一租户内用户名唯一（系统管理员 tenant_id 为 null，通过数据库约束保证）
         builder.HasIndex(u => new { u.TenantId, u.Username }).IsUnique();
+        builder.HasIndex(u => new { u.TenantId, u.Email }).IsUnique();
+        builder.HasIndex(u => new { u.TenantId, u.PhoneNumber }).IsUnique();
+        builder.HasIndex(u => new { u.TenantId, u.WeChatOpenId }).IsUnique();
+        builder.HasIndex(u => new { u.TenantId, u.WeChatUnionId }).IsUnique();
         builder.HasOne(u => u.Tenant)
             .WithMany()
             .HasForeignKey(u => u.TenantId)
@@ -227,5 +238,24 @@ public class PracticeSessionConfiguration : IEntityTypeConfiguration<PracticeSes
         builder.Property(p => p.TypeName).HasMaxLength(50);
         builder.Property(p => p.KnowledgePoint).HasMaxLength(200);
         builder.HasIndex(p => new { p.TenantId, p.StudentId, p.CreatedAt });
+    }
+}
+
+public class SmsTemplateConfiguration : IEntityTypeConfiguration<SmsTemplate>
+{
+    public void Configure(EntityTypeBuilder<SmsTemplate> builder)
+    {
+        builder.ToTable("sms_templates");
+        builder.HasKey(t => t.Id);
+        builder.Property(t => t.Scene).HasMaxLength(100).IsRequired();
+        builder.Property(t => t.Name).HasMaxLength(100).IsRequired();
+        builder.Property(t => t.TemplateBody).HasColumnType("text").IsRequired();
+        builder.Property(t => t.Description).HasMaxLength(500);
+        builder.HasOne(t => t.Tenant)
+            .WithMany()
+            .HasForeignKey(t => t.TenantId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(t => new { t.TenantId, t.Scene, t.IsEnabled });
     }
 }

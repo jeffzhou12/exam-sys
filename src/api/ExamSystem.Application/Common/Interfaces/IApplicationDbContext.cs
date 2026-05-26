@@ -18,6 +18,7 @@ public interface IApplicationDbContext
     DbSet<Book> Books { get; }
     DbSet<BookAnnotation> BookAnnotations { get; }
     DbSet<PracticeSession> PracticeSessions { get; }
+    DbSet<SmsTemplate> SmsTemplates { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

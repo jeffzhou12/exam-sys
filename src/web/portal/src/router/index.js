@@ -68,7 +68,6 @@ const routes = [
         path: 'books',
         name: 'BookList',
         component: () => import('@/views/BookList.vue'),
-        meta: { requiresAuth: true },
       },
       {
         path: 'login',

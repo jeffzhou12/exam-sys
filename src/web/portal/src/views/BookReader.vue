@@ -801,23 +801,64 @@ async function captureSelectionAsBase64(rect) {
   return off.toDataURL('image/jpeg', 0.92).split(',')[1]
 }
 
-/** 从 PDF.js 文本层提取选区内的文字（PDF 坐标转视口坐标） */
+/** 从 PDF.js 文本层提取选区内的文字
+ *  优先使用 textLayer DOM（比 getTextContent 坐标转换更可靠），
+ *  回退到 getTextContent + 仿射变换坐标计算。
+ */
 async function extractTextFromRect(rect) {
+  // ── 方案 A：从已渲染的 textLayer DOM 直接提取 ─────────────────────────
+  if (textLayerEl.value) {
+    const tlDiv = textLayerEl.value
+    const tlRect = tlDiv.getBoundingClientRect()
+    const canvasEl = pdfCanvas.value
+    if (canvasEl && tlRect.width > 0) {
+      // 选区在 canvas 坐标系（像素）
+      const sx = rect.x * renderScale
+      const sy = rect.y * renderScale
+      const sw = rect.width  * renderScale
+      const sh = rect.height * renderScale
+
+      const spans = tlDiv.querySelectorAll('span[role="presentation"], span')
+      const words = []
+      for (const span of spans) {
+        if (!span.textContent?.trim()) continue
+        const sr = span.getBoundingClientRect()
+        const canvasRect = canvasEl.getBoundingClientRect()
+        // 将 span 转换到 canvas 坐标系
+        const spx = sr.left - canvasRect.left
+        const spy = sr.top  - canvasRect.top
+        const spw = sr.width
+        const sph = sr.height
+        // 交叉判断：两矩形相交
+        if (spx + spw < sx - 4 || spx > sx + sw + 4) continue
+        if (spy + sph < sy - 4 || spy > sy + sh + 4) continue
+        words.push(span.textContent)
+      }
+      if (words.length > 0) return words.join(' ').trim()
+    }
+  }
+
+  // ── 方案 B：回退到 PDF.js getTextContent + viewport transform ──────────
   if (!pdfDoc) return ''
   try {
-    const page        = await pdfDoc.getPage(currentPage.value)
-    const viewport    = page.getViewport({ scale: 1 })
+    const page     = await pdfDoc.getPage(currentPage.value)
+    const viewport = page.getViewport({ scale: 1 })
     const textContent = await page.getTextContent()
     const words = []
     for (const item of textContent.items) {
       if (!item.str?.trim()) continue
-      const [, , , , tx, ty] = item.transform
-      // PDF 坐标 Y 轴从下到上，视口 Y 轴从上到下
-      const vpX = tx
-      const vpY = viewport.height - ty
+      // 应用仿射变换：[a, b, c, d, tx, ty]
+      const [a, b, c, d, tx, ty] = item.transform
+      // 将 PDF 用户空间坐标转换到 viewport 坐标
+      const vpPt = pdfjsLib.Util.applyTransform([0, 0], viewport.transform)
+      const pt   = pdfjsLib.Util.applyTransform([tx, ty], viewport.transform)
+      const vpX  = pt[0]
+      const vpY  = pt[1]
+      // item.height 是字体点数，近似为行高
+      const itemH = Math.abs((item.height || 12) * (d || 1))
       if (
-        vpX >= rect.x - 4 && vpX <= rect.x + rect.width  + 4 &&
-        vpY >= rect.y - 4 && vpY <= rect.y + rect.height + 4
+        vpX >= rect.x - 8 && vpX <= rect.x + rect.width  + 8 &&
+        vpY >= rect.y - itemH - 4 && vpY <= rect.y + rect.height + 4
       ) {
         words.push(item.str)
       }
@@ -1117,13 +1158,17 @@ async function runAiAnalyze() {
   aiDrawer.answer  = ''
   try {
     const res = await booksApi.aiAnalyze(bookId, {
-      selectedText: aiDrawer.selectedText,
+      selectedText: aiDrawer.selectedText || '请分析图中内容',
       question:     aiDrawer.question || null,
       imageBase64:  aiDrawer.imageBase64 || null,
     })
     aiDrawer.answer = res.answer || res
-  } catch {
-    ElMessage.error('AI 分析失败')
+  } catch (err) {
+    const msg = err?.response?.data?.error
+      || err?.response?.data?.message
+      || err?.message
+      || 'AI 分析失败，请检查 AI 配置或稍后重试'
+    ElMessage.error(msg)
   } finally {
     aiDrawer.loading = false
   }

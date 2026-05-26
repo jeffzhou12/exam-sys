@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using ExamSystem.Application.Common.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExamSystem.API.Middleware;
@@ -74,6 +75,9 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
 
             UnauthorizedAccessException e =>
                 (StatusCodes.Status401Unauthorized, "未授权", e.Message.NullIfEmpty() ?? "您无权执行此操作。"),
+
+            TooManyRequestsException e =>
+                (StatusCodes.Status429TooManyRequests, "请求过于频繁", e.Message.NullIfEmpty() ?? "请求过于频繁，请稍后重试。"),
 
             KeyNotFoundException e =>
                 (StatusCodes.Status404NotFound, "资源不存在", e.Message.NullIfEmpty() ?? "请求的资源未找到。"),

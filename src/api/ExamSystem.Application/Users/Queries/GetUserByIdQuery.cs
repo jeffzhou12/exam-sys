@@ -15,7 +15,8 @@ public class GetUserByIdQueryHandler(IApplicationDbContext context)
             .Where(u => u.Id == query.UserId)
             .Select(u => new UserDto(
                 u.Id, u.TenantId, u.Tenant != null ? u.Tenant.Name : null,
-                u.Username, u.Email, u.Role, u.IsActive, u.LastLoginAt, u.CreatedAt))
+                u.Username, u.Nickname, u.AvatarUrl, u.Email, u.PhoneNumber, u.Gender, u.Address, u.WeChatOpenId, u.WeChatUnionId,
+                u.Role, u.IsActive, u.LastLoginAt, u.CreatedAt))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

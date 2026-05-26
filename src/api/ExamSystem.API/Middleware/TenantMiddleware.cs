@@ -18,7 +18,8 @@ public class TenantMiddleware(RequestDelegate next)
 
     // 仅 GET 方法跳过租户校验的路径前缀（浏览考试列表/详情，不含写操作）
     // /api/media/image 用于 <img> 标签直接加载，浏览器不会附带自定义头
-    private static readonly string[] PublicGetPaths = ["/api/exam-papers", "/api/media/image"];
+    // /api/books        图书列表公开浏览，不含写操作（创建/编辑/删除）
+    private static readonly string[] PublicGetPaths = ["/api/exam-papers", "/api/media/image", "/api/books"];
 
     public async Task InvokeAsync(HttpContext context, ITenantService tenantService)
     {

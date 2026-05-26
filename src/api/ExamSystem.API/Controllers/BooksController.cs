@@ -36,6 +36,7 @@ public class BooksController(
 
     /// <summary>获取图书列表（分页，支持多维过滤）</summary>
     [HttpGet]
+    [AllowAnonymous]  // 允许匿名浏览，无租户头时返回全量图书
     public async Task<IActionResult> GetBooks(
         [FromQuery] string? category,
         [FromQuery] string? tag,
@@ -45,8 +46,8 @@ public class BooksController(
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        // SuperAdmin 未选租户时 tenantId 为 null，表示查看全部租户数据
-        var tenantId = tenantService.GetCurrentTenantId();
+        // 允许无租户头（portal 图书列表公开浏览），不传租户时返回全量
+        var tenantId = tenantService.TryGetCurrentTenantId();
         var mediaBaseUrl = $"{Request.Scheme}://{Request.Host}";
 
         var result = await getBooksHandler.Handle(
