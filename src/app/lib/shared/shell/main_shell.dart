@@ -15,9 +15,9 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   static const _tabs = [
     _TabItem(path: '/home',     label: '首页',   icon: Icons.home_outlined,      activeIcon: Icons.home),
-    _TabItem(path: '/exams',    label: '考试',   icon: Icons.assignment_outlined, activeIcon: Icons.assignment),
     _TabItem(path: '/practice', label: '练习',   icon: Icons.edit_note_outlined,  activeIcon: Icons.edit_note),
-    _TabItem(path: '/messages', label: '消息',   icon: Icons.mail_outline,        activeIcon: Icons.mail),
+    _TabItem(path: '/exams',    label: '考试',   icon: Icons.timer_outlined,      activeIcon: Icons.timer),
+    _TabItem(path: '/library',  label: '文库',   icon: Icons.menu_book_outlined,  activeIcon: Icons.menu_book),
     _TabItem(path: '/profile',  label: '我的',   icon: Icons.person_outline,      activeIcon: Icons.person),
   ];
 

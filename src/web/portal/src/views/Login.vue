@@ -103,6 +103,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/api/auth'
+import { redirectToAdmin } from '@/utils/adminRedirect'
 import SlideCaptchaWidget from '@/components/SlideCaptchaWidget.vue'
 
 const REMEMBER_KEY = 'portal_remember_me'
@@ -209,7 +210,7 @@ async function handlePasswordLogin() {
       }
       ElMessage.success('登录成功')
       if (user.role === 'SuperAdmin' || user.role === 'Admin') {
-        window.location.href = '/admin/'
+        redirectToAdmin()
         return
       }
       router.push(route.query.redirect || '/')
@@ -281,7 +282,7 @@ async function handleCodeLogin() {
       await auth.loginWithResult(result)
       ElMessage.success('登录成功')
       if (result.role === 'SuperAdmin' || result.role === 'Admin') {
-        window.location.href = '/admin/'
+        redirectToAdmin()
         return
       }
       router.push(route.query.redirect || '/')

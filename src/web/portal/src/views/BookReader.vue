@@ -1158,7 +1158,7 @@ async function runAiAnalyze() {
   aiDrawer.answer  = ''
   try {
     const res = await booksApi.aiAnalyze(bookId, {
-      selectedText: aiDrawer.selectedText || '请分析图中内容',
+      selectedText: aiDrawer.selectedText || null,
       question:     aiDrawer.question || null,
       imageBase64:  aiDrawer.imageBase64 || null,
     })

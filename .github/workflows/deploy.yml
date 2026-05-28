@@ -147,6 +147,10 @@ jobs:
         run: npm ci
       - name: Build frontend
         working-directory: src/web/admin
+        env:
+          VITE_API_BASE_URL: /api
+          VITE_ADMIN_BASE_PATH: ${{ vars.ADMIN_BASE_PATH || secrets.ADMIN_BASE_PATH || '/' }}
+          VITE_PORTAL_BASE_URL: ${{ vars.PORTAL_BASE_URL || secrets.PORTAL_BASE_URL || 'https://d2a95y8zxdxfqo.cloudfront.net/' }}
         run: npm run build
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -192,6 +196,7 @@ jobs:
         working-directory: src/web/portal
         env:
           VITE_API_BASE_URL: /api
+          VITE_ADMIN_BASE_URL: ${{ vars.ADMIN_BASE_URL || secrets.ADMIN_BASE_URL || 'https://d165uf1arxthuu.cloudfront.net/' }}
         run: npm run build
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

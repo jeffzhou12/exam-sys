@@ -111,6 +111,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .WithMany()
             .HasForeignKey(u => u.TenantId)
             .IsRequired(false);
+        builder.Property(u => u.EducationLevel).HasMaxLength(50);
+        builder.Property(u => u.InterestedSubjects)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>());
     }
 }
 
@@ -257,5 +263,35 @@ public class SmsTemplateConfiguration : IEntityTypeConfiguration<SmsTemplate>
             .IsRequired(false)
             .OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(t => new { t.TenantId, t.Scene, t.IsEnabled });
+    }
+}
+
+public class WrongBookItemConfiguration : IEntityTypeConfiguration<WrongBookItem>
+{
+    public void Configure(EntityTypeBuilder<WrongBookItem> builder)
+    {
+        builder.ToTable("wrong_book_items");
+        builder.HasKey(w => w.Id);
+        builder.Property(w => w.StudentId).HasMaxLength(100).IsRequired();
+        builder.Property(w => w.AnswerGiven).HasColumnType("text").IsRequired();
+        builder.HasOne(w => w.Question)
+            .WithMany()
+            .HasForeignKey(w => w.QuestionId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(w => new { w.TenantId, w.StudentId, w.QuestionId }).IsUnique();
+        builder.HasIndex(w => new { w.TenantId, w.StudentId });
+    }
+}
+
+public class UserFavoriteConfiguration : IEntityTypeConfiguration<UserFavorite>
+{
+    public void Configure(EntityTypeBuilder<UserFavorite> builder)
+    {
+        builder.ToTable("user_favorites");
+        builder.HasKey(f => f.Id);
+        builder.Property(f => f.UserId).HasMaxLength(100).IsRequired();
+        builder.Property(f => f.TargetType).HasConversion<int>();
+        builder.HasIndex(f => new { f.TenantId, f.UserId, f.TargetType, f.TargetId }).IsUnique();
+        builder.HasIndex(f => new { f.TenantId, f.UserId, f.TargetType });
     }
 }

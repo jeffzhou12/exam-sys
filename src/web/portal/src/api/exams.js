@@ -11,4 +11,8 @@ export const examsApi = {
   getMyResult: (examPaperId, studentId) =>
     request.get(`/exam-papers/${examPaperId}/answers/${studentId}`, { withTenant: true }),
   getMyExams: () => request.get('/student/my-results', { withTenant: true }),
+
+  /** AI 智能分析本次考试成绩 */
+  analyzeResult: (examPaperId, studentId) =>
+    request.post(`/exam-papers/${examPaperId}/answers/${studentId}/analyze`, {}, { withTenant: true }),
 }

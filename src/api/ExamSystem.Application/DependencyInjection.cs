@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<StudentAnswers.Commands.SubmitAnswersCommandHandler>();
         services.AddScoped<StudentAnswers.Commands.GradeWithAiCommandHandler>();
         services.AddScoped<StudentAnswers.Commands.ManualGradeCommandHandler>();
+        services.AddScoped<StudentAnswers.Commands.AnalyzeExamResultCommandHandler>();
         services.AddScoped<StudentAnswers.Queries.GetStudentResultQueryHandler>();
         services.AddScoped<StudentAnswers.Queries.GetStudentExamsQueryHandler>();
 
@@ -47,6 +48,8 @@ public static class DependencyInjection
         services.AddScoped<Users.Commands.UpdateUserCommandHandler>();
         services.AddScoped<Users.Commands.ToggleUserStatusCommandHandler>();
         services.AddScoped<Users.Commands.AdminResetPasswordCommandHandler>();
+        services.AddScoped<Users.Commands.GetMyProfileQueryHandler>();
+        services.AddScoped<Users.Commands.UpdateMyProfileCommandHandler>();
 
         // 在线练习
         services.AddScoped<Practice.GetPracticeQuestionsQueryHandler>();
@@ -56,6 +59,11 @@ public static class DependencyInjection
         services.AddScoped<Practice.GetQuestionAnswerQueryHandler>();
         services.AddScoped<Practice.SavePracticeSessionCommandHandler>();
         services.AddScoped<Practice.GetPracticeHistoryQueryHandler>();
+        // 错题本 & 管理端练习查询
+        services.AddScoped<Practice.SaveWrongBookItemCommandHandler>();
+        services.AddScoped<Practice.GetAdminWrongBookQueryHandler>();
+        services.AddScoped<Practice.GetAdminPracticeSessionsQueryHandler>();
+        services.AddScoped<Practice.AnalyzePracticeResultCommandHandler>();
 
         // 站内信
         services.AddScoped<Messages.SendMessageCommandHandler>();
@@ -88,6 +96,11 @@ public static class DependencyInjection
         services.AddScoped<AiConfigs.UpdateAiModelConfigCommandHandler>();
         services.AddScoped<AiConfigs.DeleteAiModelConfigCommandHandler>();
         services.AddScoped<AiConfigs.ResetAiModelConfigQuotaCommandHandler>();
+
+        // 收藏
+        services.AddScoped<Favorites.ToggleFavoriteCommandHandler>();
+        services.AddScoped<Favorites.CheckFavoriteQueryHandler>();
+        services.AddScoped<Favorites.GetFavoritesQueryHandler>();
 
         // 短信模板管理
         services.AddScoped<SmsTemplates.GetSmsTemplatesQueryHandler>();

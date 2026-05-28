@@ -66,6 +66,9 @@
               style="margin:2px"
             >{{ tag }}</el-tag>
           </div>
+          <div class="book-fav" @click.stop>
+            <FavoriteButton :target-type="3" :target-id="book.id" />
+          </div>
         </div>
       </div>
 
@@ -91,6 +94,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { booksApi } from '@/api/books'
 import { Search, Reading, Document } from '@element-plus/icons-vue'
+import FavoriteButton from '@/components/FavoriteButton.vue'
 
 const router = useRouter()
 const books = ref([])

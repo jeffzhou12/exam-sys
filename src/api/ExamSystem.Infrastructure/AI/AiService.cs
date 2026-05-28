@@ -121,18 +121,38 @@ public class AiService(
         CancellationToken cancellationToken = default)
     {
         var bookPart = string.IsNullOrWhiteSpace(bookTitle) ? "" : $"（出自《{bookTitle}》）";
-        var textPrompt =
-            $"你是一位博学的阅读辅导助手。用户正在阅读{bookPart}，请根据他的问题进行深入解析。\n\n" +
-            (string.IsNullOrWhiteSpace(selectedText) ? "" : $"【原文段落】\n{selectedText}\n\n") +
-            $"【用户问题】\n{(string.IsNullOrWhiteSpace(question) ? "请分析这段内容" : question)}\n\n" +
-            "请提供清晰、准确的回答，使用 Markdown 格式，结构包括：\n" +
-            "1. **直接回答**：针对问题的核心解答\n" +
-            "2. **深入分析**：结合原文展开讲解\n" +
-            "3. **延伸思考**：相关知识或思考角度（简要）\n\n" +
-            "语言生动、通俗易懂。";
+        bool hasText  = !string.IsNullOrWhiteSpace(selectedText);
+        bool hasImage = !string.IsNullOrWhiteSpace(imageBase64);
 
-        if (!string.IsNullOrWhiteSpace(imageBase64))
-            return await CallVisionWithSceneAsync(AiScene.AnalyzeBook, textPrompt, imageBase64, cancellationToken);
+        string textPrompt;
+        if (!hasText && hasImage)
+        {
+            // 纯图片区域（扫描页、图表、公式等）—— 要求 AI 先做 OCR 再分析
+            textPrompt =
+                $"你是一位博学的阅读辅导助手。用户正在阅读{bookPart}，框选了一段图片区域（可能是扫描文字、图表、公式或插图）。\n\n" +
+                "**请先完整地识别图片中的所有文字内容（OCR）**，然后对识别结果进行深入分析。\n\n" +
+                $"【用户问题】\n{(string.IsNullOrWhiteSpace(question) ? "请识别并分析图中的内容" : question)}\n\n" +
+                "请使用 Markdown 格式，结构包括：\n" +
+                "1. **图片内容识别**：逐字列出图片中识别到的文字（若为纯图形则描述图形内容）\n" +
+                "2. **分析解读**：对识别内容进行深入分析讲解\n" +
+                "3. **延伸思考**：相关知识或思考角度（简要）\n\n" +
+                "语言生动、通俗易懂。";
+        }
+        else
+        {
+            textPrompt =
+                $"你是一位博学的阅读辅导助手。用户正在阅读{bookPart}，请根据他的问题进行深入解析。\n\n" +
+                (hasText ? $"【原文段落】\n{selectedText}\n\n" : "") +
+                $"【用户问题】\n{(string.IsNullOrWhiteSpace(question) ? "请分析这段内容" : question)}\n\n" +
+                "请提供清晰、准确的回答，使用 Markdown 格式，结构包括：\n" +
+                "1. **直接回答**：针对问题的核心解答\n" +
+                "2. **深入分析**：结合原文展开讲解\n" +
+                "3. **延伸思考**：相关知识或思考角度（简要）\n\n" +
+                "语言生动、通俗易懂。";
+        }
+
+        if (hasImage)
+            return await CallVisionWithSceneAsync(AiScene.AnalyzeBook, textPrompt, imageBase64!, cancellationToken);
 
         return await CallChatWithSceneAsync(AiScene.AnalyzeBook, textPrompt, cancellationToken);
     }
@@ -155,6 +175,61 @@ public class AiService(
 
         await TrackUsageAsync(config, "Embedding", embedding.Length, 0, true, cancellationToken);
         return embedding;
+    }
+
+    public async Task<string> AnalyzeExamResultAsync(
+        string examTitle, int totalScore, int maxScore, double percentage,
+        List<string> wrongQuestionSummaries,
+        CancellationToken cancellationToken = default)
+    {
+        var pctStr = percentage.ToString("F0");
+        var wrongPart = wrongQuestionSummaries.Count > 0
+            ? $"\n\n【答错的题目（部分）】\n{string.Join('\n', wrongQuestionSummaries)}"
+            : "\n\n（全部答对，表现优异！）";
+
+        var prompt =
+            $"你是一位专业的学习分析师和教育顾问。请对以下考试成绩进行深度分析。\n\n" +
+            $"【考试名称】{examTitle}\n" +
+            $"【得分】{totalScore} / {maxScore}（{pctStr}%）{wrongPart}\n\n" +
+            "请从以下维度进行深入分析（使用 Markdown 格式，条理清晰）：\n" +
+            "1. **整体评价**：对本次考试成绩的综合评价（1-2 句）\n" +
+            "2. **薄弱知识点分析**：根据答错题目，分析存在薄弱的知识点或概念\n" +
+            "3. **深层原因诊断**：推测可能的学习误区或理解偏差\n" +
+            "4. **针对性提升建议**：给出 3-5 条具体可执行的学习建议\n" +
+            "5. **推荐练习方向**：建议重点练习的题型或知识领域\n\n" +
+            "语言亲切、鼓励为主，具体可执行，避免空话套话。";
+
+        return await CallChatWithSceneAsync(AiScene.AnalyzePerformance, prompt, cancellationToken);
+    }
+
+    public async Task<string> AnalyzePracticeResultAsync(
+        int totalCount, int correctCount, int totalScore, int maxScore,
+        string? knowledgePoint, string? typeName,
+        List<PracticeWrongItemInfo> wrongItems,
+        CancellationToken cancellationToken = default)
+    {
+        var correctRate = totalCount > 0 ? (double)correctCount / totalCount * 100 : 0;
+        var kpPart = string.IsNullOrWhiteSpace(knowledgePoint) ? "综合练习" : $"知识点：{knowledgePoint}";
+        var typePart = string.IsNullOrWhiteSpace(typeName) ? "" : $"，题型：{typeName}";
+        var wrongPart = wrongItems.Count > 0
+            ? "\n\n【答错的题目（部分）】\n" + string.Join('\n', wrongItems.Take(10).Select(w =>
+                $"- {w.Content[..Math.Min(80, w.Content.Length)]}（知识点：{w.KnowledgePoint ?? "未标注"}，难度：{w.Difficulty?.ToString() ?? "未知"}）"))
+            : "\n\n（全部答对！）";
+
+        var prompt =
+            $"你是一位专业的学习分析师。请对以下在线练习结果进行深度分析。\n\n" +
+            $"【练习范围】{kpPart}{typePart}\n" +
+            $"【总题数】{totalCount} 题，【答对】{correctCount} 题（正确率 {correctRate:F0}%）\n" +
+            $"【得分】{totalScore} / {maxScore}{wrongPart}\n\n" +
+            "请从以下维度进行分析（使用 Markdown 格式）：\n" +
+            "1. **练习表现评价**：简要评价本次练习\n" +
+            "2. **知识掌握诊断**：分析哪些知识点掌握不扎实\n" +
+            "3. **错误规律分析**：找出错题中的规律（题型、难度、知识点集中度）\n" +
+            "4. **改进建议**：3-5 条针对性练习建议\n" +
+            "5. **下一步学习计划**：推荐接下来的练习重点\n\n" +
+            "语言简洁、鼓励，帮助学生建立信心并制定有效学习计划。";
+
+        return await CallChatWithSceneAsync(AiScene.AnalyzePerformance, prompt, cancellationToken);
     }
 
     private async Task<string> CallChatWithSceneAsync(

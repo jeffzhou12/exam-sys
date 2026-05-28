@@ -26,6 +26,28 @@
         </div>
       </div>
 
+        <!-- AI 智能分析 -->
+        <div class="ai-analysis-section">
+          <div class="ai-analysis-header">
+            <div class="ai-analysis-title">
+              <el-icon color="#8b5cf6" size="18"><Cpu /></el-icon>
+              <span>AI 智能分析</span>
+            </div>
+            <el-button
+              type="primary"
+              :loading="aiLoading"
+              :disabled="!!aiResult"
+              @click="doAiAnalyze"
+            >
+              {{ aiResult ? '已分析' : 'AI 智能分析成绩' }}
+            </el-button>
+          </div>
+          <div v-if="aiResult" class="ai-analysis-result" v-html="renderMarkdown(aiResult)" />
+          <div v-else-if="!aiLoading" class="ai-analysis-hint">
+            点击按钮，请 AI 对本次考试成绩进行深度分析，包括薄弱知识点识别、提升建议和识别推荐。
+          </div>
+        </div>
+
       <!-- 各题得分 -->
       <div class="answers-section">
         <h2 class="section-title">答题详情</h2>
@@ -75,6 +97,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { examsApi } from '@/api/exams'
 import { ArrowLeft, Cpu } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { marked } from 'marked'
+
+const renderMarkdown = (text) => marked.parse(text || '')
 
 const route = useRoute()
 const router = useRouter()
@@ -82,6 +108,22 @@ const auth = useAuthStore()
 const result = ref(null)
 const examTitle = ref('')
 const loading = ref(true)
+
+// AI 分析
+const aiLoading = ref(false)
+const aiResult = ref('')
+
+async function doAiAnalyze() {
+  aiLoading.value = true
+  try {
+    const res = await examsApi.analyzeResult(route.params.examId, auth.user?.id)
+    aiResult.value = res.analysis
+  } catch {
+    ElMessage.error('AI 分析失败，请稍后再试')
+  } finally {
+    aiLoading.value = false
+  }
+}
 
 const totalMyScore = computed(() =>
   result.value?.answers?.reduce((s, a) => s + (a.score ?? 0), 0) ?? 0,
@@ -253,4 +295,54 @@ onMounted(async () => {
   color: #6b21a8;
   line-height: 1.6;
 }
-</style>
+
+/* AI 分析区域 */
+.ai-analysis-section {
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+}
+.ai-analysis-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.ai-analysis-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #6b21a8;
+}
+.ai-analysis-hint {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+.ai-analysis-result {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #1e293b;
+}
+.ai-analysis-result :deep(h1),
+.ai-analysis-result :deep(h2),
+.ai-analysis-result :deep(h3) {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 12px 0 6px;
+  color: #4c1d95;
+}
+.ai-analysis-result :deep(ul),
+.ai-analysis-result :deep(ol) {
+  padding-left: 20px;
+}
+.ai-analysis-result :deep(li) {
+  margin-bottom: 4px;
+}
+.ai-analysis-result :deep(p) {
+  margin: 6px 0;
+}

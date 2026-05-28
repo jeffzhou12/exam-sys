@@ -45,9 +45,19 @@
           <template #title>图书管理</template>
         </el-menu-item>
 
-        <el-menu-item v-if="auth.isAnyAdmin" index="/messages">
+        <el-menu-item v-if="auth.isAdminOrTeacher" index="/messages">
           <el-icon><ChatDotRound /></el-icon>
           <template #title>消息管理</template>
+        </el-menu-item>
+
+        <el-menu-item v-if="auth.isAdminOrTeacher" index="/practice-sessions">
+          <el-icon><Histogram /></el-icon>
+          <template #title>练习记录</template>
+        </el-menu-item>
+
+        <el-menu-item v-if="auth.isAdminOrTeacher" index="/wrong-book">
+          <el-icon><CollectionTag /></el-icon>
+          <template #title>错题本管理</template>
         </el-menu-item>
 
         <el-menu-item v-if="auth.isAnyAdmin" index="/ai-configs">
@@ -145,12 +155,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { tenantsApi } from '@/api/tenants'
+import { getPortalLoginUrl } from '@/utils/authHandoff'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useThemeStore } from '@/stores/theme'
 import {
   DataBoard, OfficeBuilding, User, Document, QuestionFilled,
   Expand, Fold, UserFilled, SwitchButton, School, Reading,
-  ChatDotRound, Notebook, Setting, Moon, Sunny
+  ChatDotRound, Notebook, Setting, Moon, Sunny, Histogram, CollectionTag
 } from '@element-plus/icons-vue'
 
 const theme = useThemeStore()
@@ -207,7 +218,7 @@ async function handleCommand(cmd) {
     })
     auth.logout()
     // 跳转到 portal 登录页（绕过 /admin/ base 前缀）
-    window.location.href = '/login'
+    window.location.href = getPortalLoginUrl()
   }
 }
 
@@ -217,7 +228,7 @@ onMounted(loadTenants)
 function onStorageChange(e) {
   if (e.key === 'exam-token' && !e.newValue) {
     auth.syncFromStorage()
-    window.location.href = '/login'
+    window.location.href = getPortalLoginUrl()
   }
   // 租户切换同步（另一个标签页切换了租户）
   if (e.key === 'exam-activeTenantId') {

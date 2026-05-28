@@ -17,6 +17,7 @@ public class StudentAnswersController(
     GetStudentResultQueryHandler resultHandler,
     ManualGradeCommandHandler manualGradeHandler,
     GetStudentExamsQueryHandler studentExamsHandler,
+    AnalyzeExamResultCommandHandler analyzeHandler,
     ITenantService tenantService) : ControllerBase
 {
     /// <summary>考生提交答案（客观题自动评分，简答题待 AI 评分）</summary>
@@ -98,6 +99,18 @@ public class StudentAnswersController(
         var result = await studentExamsHandler.Handle(
             new GetStudentExamsQuery(studentId, tenantId), cancellationToken);
         return Ok(result);
+    }
+
+    /// <summary>AI 智能分析本次考试成绩（前台）</summary>
+    [HttpPost("{studentId}/analyze")]
+    [Authorize(Roles = Roles.All)]
+    [ProducesResponseType(typeof(string), 200)]
+    public async Task<IActionResult> AnalyzeResult(
+        Guid examPaperId, string studentId, CancellationToken cancellationToken = default)
+    {
+        var analysis = await analyzeHandler.Handle(
+            new AnalyzeExamResultCommand(examPaperId, studentId), cancellationToken);
+        return Ok(new { analysis });
     }
 }
 

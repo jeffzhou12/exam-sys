@@ -52,6 +52,7 @@
           {{ formatDateRange(exam.startTime, exam.endTime) }}
         </div>
         <div class="card-actions">
+          <FavoriteButton :target-type="2" :target-id="exam.id" />
           <router-link :to="`/exams/${exam.id}`">
             <el-button type="primary" round size="small">查看详情</el-button>
           </router-link>
@@ -79,6 +80,7 @@
 import { ref, onMounted } from 'vue'
 import { examsApi } from '@/api/exams'
 import { Clock, Document, Calendar } from '@element-plus/icons-vue'
+import FavoriteButton from '@/components/FavoriteButton.vue'
 
 const exams = ref([])
 const loading = ref(false)

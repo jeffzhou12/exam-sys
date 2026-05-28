@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { getPortalLoginUrl } from '@/utils/authHandoff'
 
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -32,7 +33,7 @@ request.interceptors.response.use(
       localStorage.removeItem('exam-token')
       localStorage.removeItem('exam-user')
       // 跳转到 portal 登录页（绕过 admin base 路径）
-      window.location.href = '/login'
+      window.location.href = getPortalLoginUrl()
       ElMessage.error('登录已过期，请重新登录')
     } else if (status === 403) {
       ElMessage.error('无权限访问该资源')

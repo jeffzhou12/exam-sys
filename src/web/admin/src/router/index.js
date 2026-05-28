@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { consumeAuthHandoff, getPortalLoginUrl } from '@/utils/authHandoff'
 
 const routes = [
   {
@@ -69,7 +70,19 @@ const routes = [
         path: 'messages',
         name: 'Messages',
         component: () => import('@/views/messages/MessageList.vue'),
-        meta: { title: '消息管理', roles: ['SuperAdmin', 'Admin'] }
+        meta: { title: '消息管理', roles: ['SuperAdmin', 'Admin', 'Teacher'] }
+      },
+      {
+        path: 'practice-sessions',
+        name: 'PracticeSessions',
+        component: () => import('@/views/practice/PracticeSessionList.vue'),
+        meta: { title: '练习记录', roles: ['SuperAdmin', 'Admin', 'Teacher'] }
+      },
+      {
+        path: 'wrong-book',
+        name: 'WrongBook',
+        component: () => import('@/views/wrong-book/WrongBookList.vue'),
+        meta: { title: '错题本管理', roles: ['SuperAdmin', 'Admin', 'Teacher'] }
       },
       {
         path: 'ai-configs',
@@ -93,22 +106,25 @@ const routes = [
 
 const router = createRouter({
   // 与 vite.config base: '/admin/' 一致，实现同源代理访问
-  history: createWebHistory('/admin/'),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes
 })
 
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
+  if (consumeAuthHandoff()) {
+    auth.syncFromStorage()
+  }
 
   if (!auth.isLoggedIn) {
     // 跳转到 portal 登录页（绕过 /admin/ base 前缀）
-    window.location.href = '/login'
+    window.location.href = getPortalLoginUrl()
     return
   }
 
   // 只允许管理员和教师进入后台
   if (!auth.isAdminOrTeacher) {
-    window.location.href = '/login'
+    window.location.href = getPortalLoginUrl()
     return
   }
 

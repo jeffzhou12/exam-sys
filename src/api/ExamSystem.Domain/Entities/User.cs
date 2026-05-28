@@ -22,5 +22,11 @@ public class User : BaseEntity
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAt { get; set; }
 
+    /// <summary>学历（小学/初中/高中/大学/研究生/博士）</summary>
+    public string? EducationLevel { get; set; }
+
+    /// <summary>感兴趣的学科列表（JSON 数组存储）</summary>
+    public List<string> InterestedSubjects { get; set; } = [];
+
     public Tenant? Tenant { get; set; }
 }

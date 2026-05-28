@@ -60,6 +60,30 @@ resource "aws_s3_bucket_policy" "frontend" {
   depends_on = [aws_s3_bucket_public_access_block.frontend]
 }
 
+# ── CloudFront Function: /admin/* SPA 路由重写 ────────────────────────────────
+# S3 没有"子目录默认文档"机制，/admin/ 或 /admin/dashboard 等 SPA 路由
+# 在 S3 上不存在对应文件，请求会 404。CloudFront Function 在 Viewer Request
+# 阶段将这类路径提前重写为 /admin/index.html，避免触发全局 404 回退
+# (全局回退只能返回 portal 的 /index.html，导致管理后台无法打开)。
+resource "aws_cloudfront_function" "admin_spa_rewrite" {
+  name    = "${var.name}-admin-spa-rewrite"
+  runtime = "cloudfront-js-2.0"
+  publish = true
+  comment = "Rewrite /admin/* SPA routes to /admin/index.html"
+
+  code = <<-EOT
+    function handler(event) {
+      var request = event.request;
+      var uri = request.uri;
+      // 有文件扩展名（如 .js/.css/.png）的请求直接透传，其余视为 SPA 路由
+      if (!uri.match(/\/[^\/]*\.[^\/]+$/)) {
+        request.uri = '/admin/index.html';
+      }
+      return request;
+    }
+  EOT
+}
+
 # ── CloudFront Distribution ───────────────────────────────────────────────────
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
@@ -109,6 +133,33 @@ resource "aws_cloudfront_distribution" "frontend" {
     min_ttl     = 0
     default_ttl = 0
     max_ttl     = 0
+  }
+
+  # 行为 2: /admin/* 走 S3，附加 CF Function 处理 SPA 路由重写
+  # 必须放在默认行为之前、/api/* 之后
+  ordered_cache_behavior {
+    path_pattern           = "/admin/*"
+    target_origin_id       = "S3-${var.bucket_name}"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    min_ttl     = 0
+    default_ttl = 86400
+    max_ttl     = 31536000
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.admin_spa_rewrite.arn
+    }
   }
 
   # 默认行为: /* 走 S3 (静态文件，长缓存)

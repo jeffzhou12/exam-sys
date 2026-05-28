@@ -20,6 +20,10 @@ public class PracticeController(
     GetQuestionAnswerQueryHandler getAnswerHandler,
     SavePracticeSessionCommandHandler saveSessionHandler,
     GetPracticeHistoryQueryHandler getHistoryHandler,
+    SaveWrongBookItemCommandHandler saveWrongBookHandler,
+    GetAdminWrongBookQueryHandler adminWrongBookHandler,
+    GetAdminPracticeSessionsQueryHandler adminPracticeSessionsHandler,
+    AnalyzePracticeResultCommandHandler analyzePracticeHandler,
     ITenantService tenantService) : ControllerBase
 {
     private Guid? TenantId => tenantService.GetCurrentTenantId();
@@ -163,6 +167,76 @@ public class PracticeController(
 
         return Ok(result);
     }
+
+    // ─── 错题本 ────────────────────────────────────────────────────────────────
+
+    /// <summary>添加/更新错题本条目（upsert）</summary>
+    [HttpPost("wrong-book")]
+    public async Task<IActionResult> SaveWrongBookItem(
+        [FromBody] SaveWrongBookRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (TenantId is null)
+            return BadRequest(new { error = "无法确定租户。" });
+
+        var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                     ?? User.FindFirstValue("sub");
+        if (studentId is null) return Unauthorized();
+
+        await saveWrongBookHandler.Handle(
+            new SaveWrongBookItemCommand(TenantId.Value, studentId, request.QuestionId, request.AnswerGiven),
+            cancellationToken);
+
+        return NoContent();
+    }
+
+    // ─── 管理端：练习记录和错题本查询 ────────────────────────────────────────
+
+    /// <summary>管理端：分页查询租户内所有练习记录</summary>
+    [HttpGet("~/api/admin/practice/sessions")]
+    [Authorize(Roles = Roles.AdminOrTeacher)]
+    public async Task<IActionResult> GetAdminPracticeSessions(
+        [FromQuery] string? studentId,
+        [FromQuery] string? knowledgePoint,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var tenantId = tenantService.GetCurrentTenantId();
+        var result = await adminPracticeSessionsHandler.Handle(
+            new GetAdminPracticeSessionsQuery(tenantId, studentId, knowledgePoint, page, pageSize),
+            cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>管理端：分页查询租户内所有错题本记录</summary>
+    [HttpGet("~/api/admin/wrong-book")]
+    [Authorize(Roles = Roles.AdminOrTeacher)]
+    public async Task<IActionResult> GetAdminWrongBook(
+        [FromQuery] string? studentId,
+        [FromQuery] string? knowledgePoint,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var tenantId = tenantService.GetCurrentTenantId();
+        var result = await adminWrongBookHandler.Handle(
+            new GetAdminWrongBookQuery(tenantId, studentId, knowledgePoint, page, pageSize),
+            cancellationToken);
+        return Ok(result);
+    }
+
+    // ─── AI 分析练习结果 ──────────────────────────────────────────────────────
+
+    /// <summary>AI 智能分析本次练习成绩（前台）</summary>
+    [HttpPost("analyze")]
+    public async Task<IActionResult> AnalyzePracticeResult(
+        [FromBody] AnalyzePracticeResultRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var analysis = await analyzePracticeHandler.Handle(request, cancellationToken);
+        return Ok(new { analysis });
+    }
 }
 
 public record SubmitAnswerItem(Guid QuestionId, string Answer);
@@ -171,3 +245,4 @@ public record SaveSessionRequest(
     int Count, int CorrectCount, int TotalScore, int MaxScore,
     string? TypeName, string? KnowledgePoint,
     int? QuestionType, int? Difficulty, int SetupCount);
+public record SaveWrongBookRequest(Guid QuestionId, string AnswerGiven);

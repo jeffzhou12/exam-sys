@@ -11,14 +11,14 @@ namespace ExamSystem.API.Controllers;
 [Produces("application/json")]
 [Authorize]
 public class ProfileController(
-    GetUserByIdQueryHandler getUserByIdHandler,
-    UpdateUserCommandHandler updateUserHandler) : ControllerBase
+    GetMyProfileQueryHandler getMyProfileHandler,
+    UpdateMyProfileCommandHandler updateMyProfileHandler) : ControllerBase
 {
     private Guid? CurrentUserId =>
         Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
 
     [HttpGet]
-    [ProducesResponseType(typeof(UserDto), 200)]
+    [ProducesResponseType(typeof(MyProfileDto), 200)]
     [ProducesResponseType(401)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken = default)
@@ -26,11 +26,11 @@ public class ProfileController(
         if (CurrentUserId is null)
             return Unauthorized();
 
-        var result = await getUserByIdHandler.Handle(new GetUserByIdQuery(CurrentUserId.Value), cancellationToken);
+        var result = await getMyProfileHandler.Handle(new GetMyProfileQuery(CurrentUserId.Value), cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }
 
-    [HttpPut]
+    [HttpPatch]
     [ProducesResponseType(204)]
     [ProducesResponseType(400)]
     [ProducesResponseType(401)]
@@ -42,27 +42,23 @@ public class ProfileController(
         if (CurrentUserId is null)
             return Unauthorized();
 
-        await updateUserHandler.Handle(new UpdateUserCommand(
+        await updateMyProfileHandler.Handle(new UpdateMyProfileCommand(
             CurrentUserId.Value,
-            request.Email,
-            request.PhoneNumber,
             request.Nickname,
             request.AvatarUrl,
             request.Gender,
             request.Address,
-            request.WeChatOpenId,
-            request.WeChatUnionId), cancellationToken);
+            request.EducationLevel,
+            request.InterestedSubjects), cancellationToken);
 
         return NoContent();
     }
 }
 
 public record UpdateProfileRequest(
-    string? Email,
-    string? PhoneNumber,
     string? Nickname,
     string? AvatarUrl,
     string? Gender,
     string? Address,
-    string? WeChatOpenId,
-    string? WeChatUnionId);
+    string? EducationLevel,
+    List<string>? InterestedSubjects);

@@ -18,6 +18,8 @@ public interface IApplicationDbContext
     DbSet<Book> Books { get; }
     DbSet<BookAnnotation> BookAnnotations { get; }
     DbSet<PracticeSession> PracticeSessions { get; }
+    DbSet<WrongBookItem> WrongBookItems { get; }
+    DbSet<UserFavorite> UserFavorites { get; }
     DbSet<SmsTemplate> SmsTemplates { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

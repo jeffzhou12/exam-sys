@@ -31,4 +31,12 @@ export const practiceApi = {
   /** 获取当前用户的服务端练习历史记录 */
   getHistory: () =>
     request.get('/practice/sessions', { withTenant: true }),
+
+  /** 同步添加/更新错题本条目（server-side upsert） */
+  saveWrongBookItem: (questionId, answerGiven = '') =>
+    request.post('/practice/wrong-book', { questionId, answerGiven }, { withTenant: true }),
+
+  /** AI 智能分析本次练习成绩 */
+  analyzeSession: (data) =>
+    request.post('/practice/analyze', data, { withTenant: true }),
 }

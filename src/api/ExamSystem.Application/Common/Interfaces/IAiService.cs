@@ -16,6 +16,16 @@ public interface IAiService
 
     /// <summary>对图书段落进行 AI 分析问答，可附带截图（base64）</summary>
     Task<string> AnalyzeBookTextAsync(string selectedText, string question, string? bookTitle, string? imageBase64 = null, CancellationToken cancellationToken = default);
+
+    /// <summary>对考试成绩进行综合 AI 分析，返回 Markdown 格式分析报告</summary>
+    Task<string> AnalyzeExamResultAsync(string examTitle, int totalScore, int maxScore, double percentage,
+        List<string> wrongQuestionSummaries, CancellationToken cancellationToken = default);
+
+    /// <summary>对练习结果进行综合 AI 分析，返回 Markdown 格式分析报告</summary>
+    Task<string> AnalyzePracticeResultAsync(int totalCount, int correctCount, int totalScore, int maxScore,
+        string? knowledgePoint, string? typeName, List<PracticeWrongItemInfo> wrongItems,
+        CancellationToken cancellationToken = default);
 }
 
 public record AiGradingResult(int Score, string Feedback, int PromptTokens, int CompletionTokens);
+public record PracticeWrongItemInfo(string Content, string? KnowledgePoint, int? Difficulty);

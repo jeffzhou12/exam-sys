@@ -25,6 +25,13 @@ public enum GradingStatus
     ManualGraded = 3 // 人工评分完成
 }
 
+public enum FavoriteTargetType
+{
+    Question = 1,   // 题目
+    ExamPaper = 2,  // 考试
+    Book = 3        // 图书
+}
+
 public enum UserRole
 {
     SuperAdmin = -1, // 超级管理员（无租户，可管理全部）
@@ -36,10 +43,11 @@ public enum UserRole
 /// <summary>AI 功能场景，用于针对不同业务模块配置不同的 AI 模型</summary>
 public enum AiScene
 {
-    Default = 0,           // 默认/通用场景（其他场景无配置时回退到此）
-    GenerateQuestions = 1, // AI 生成题目
-    GradeAnswer = 2,       // AI 批改/评分
-    ExplainQuestion = 3,   // AI 题目解析
-    AnalyzeBook = 4,       // AI 阅读辅助分析
-    Embedding = 5          // 向量嵌入（用于去重等）
+    Default = 0,             // 默认/通用场景（其他场景无配置时回退到此）
+    GenerateQuestions = 1,   // AI 生成题目
+    GradeAnswer = 2,         // AI 批改/评分
+    ExplainQuestion = 3,     // AI 题目解析
+    AnalyzeBook = 4,         // AI 阅读辅助分析
+    Embedding = 5,           // 向量嵌入（用于去重等）
+    AnalyzePerformance = 6,  // AI 学习成绩/练习结果分析
 }

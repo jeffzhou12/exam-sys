@@ -80,8 +80,8 @@
           <!-- 后台管理入口（管理员） -->
           <a
             v-if="auth.isLoggedIn && auth.isAnyAdmin"
-            href="/admin/"
             class="admin-entry-btn"
+            @click.prevent="redirectToAdmin()"
           >
             <el-icon size="13"><Setting /></el-icon>
             管理后台
@@ -123,6 +123,12 @@
                   </el-dropdown-item>
                   <el-dropdown-item command="wrongBook">
                     <el-icon><Collection /></el-icon> 错题本
+                  </el-dropdown-item>
+                  <el-dropdown-item command="favorites">
+                    <el-icon><Star /></el-icon> 我的收藏
+                  </el-dropdown-item>
+                  <el-dropdown-item command="profile">
+                    <el-icon><User /></el-icon> 个人资料
                   </el-dropdown-item>
                   <el-dropdown-item command="messages">
                     <el-icon><Message /></el-icon> 站内信
@@ -185,8 +191,9 @@ import { tenantsApi } from '@/api/tenants'
 import { useThemeStore } from '@/stores/theme'
 import {
   ArrowDown, DataAnalysis, SwitchButton, Setting, Document,
-  Memo, Collection, Message, OfficeBuilding, Moon, Sunny
+  Memo, Collection, Message, OfficeBuilding, Moon, Sunny, Star, User
 } from '@element-plus/icons-vue'
+import { redirectToAdmin } from '@/utils/adminRedirect'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -243,9 +250,11 @@ function handleCommand(cmd) {
     router.push('/')
   } else if (cmd === 'results')     { router.push('/my-results') }
   else if (cmd === 'teacherExams')  { router.push('/teacher/exams') }
-  else if (cmd === 'admin')         { window.location.href = '/admin/' }
+  else if (cmd === 'admin')         { redirectToAdmin() }
   else if (cmd === 'practice')      { router.push('/practice') }
   else if (cmd === 'wrongBook')     { router.push('/wrong-book') }
+  else if (cmd === 'favorites')     { router.push('/my-favorites') }
+  else if (cmd === 'profile')       { router.push('/profile') }
   else if (cmd === 'messages')      { router.push('/messages') }
 }
 

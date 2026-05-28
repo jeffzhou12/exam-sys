@@ -26,7 +26,27 @@
           一键加入错题本 ({{ wrongItems.length }})
         </el-button>
         <el-button @click="$router.push('/wrong-book')">查看错题本</el-button>
+        <el-button
+          type="warning"
+          plain
+          :loading="aiLoading"
+          :disabled="!!aiResult"
+          @click="doAiAnalyze"
+        >
+          <el-icon><Cpu /></el-icon>
+          {{ aiResult ? 'AI 已分析' : 'AI 智能分析' }}
+        </el-button>
       </div>
+    </div>
+
+    <!-- AI 分析结果 -->
+    <div v-if="aiResult || aiLoading" class="ai-analysis-block">
+      <div class="ai-block-title">
+        <el-icon color="#8b5cf6" size="18"><Cpu /></el-icon>
+        <span>AI 智能分析报告</span>
+      </div>
+      <el-skeleton v-if="aiLoading" :rows="5" animated />
+      <div v-else class="ai-block-content" v-html="renderMarkdown(aiResult)" />
     </div>
 
     <!-- 题目详情列表 -->
@@ -104,10 +124,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { CircleCheck, CircleClose, InfoFilled, ChatDotRound } from '@element-plus/icons-vue'
+import { CircleCheck, CircleClose, InfoFilled, ChatDotRound, Cpu } from '@element-plus/icons-vue'
 import SimilarQuestions from '@/components/SimilarQuestions.vue'
 import SendMessageDialog from '@/components/SendMessageDialog.vue'
 import RichContent from '@/components/RichContent.vue'
+import { practiceApi } from '@/api/practice'
+import { marked } from 'marked'
+
+const renderMarkdown = (text) => marked.parse(text || '')
 
 const router = useRouter()
 const result = ref(null)
@@ -170,6 +194,8 @@ function toggleWrongBook(item) {
     })
     saveWrongBook(book)
     ElMessage.success('已加入错题本')
+    // 同步到服务端（火就不管）
+    practiceApi.saveWrongBookItem(item.questionId, item.studentAnswer ?? '').catch(() => {})
   }
 }
 
@@ -191,6 +217,7 @@ function addAllWrong() {
         addedAt: new Date().toISOString(),
       })
       added++
+      practiceApi.saveWrongBookItem(item.questionId, item.studentAnswer ?? '').catch(() => {})
     }
   }
   saveWrongBook(book)
@@ -203,6 +230,36 @@ function addWrongToPractice(q) {
   if (!existing.find(x => x.id === q.id)) existing.push(q)
   sessionStorage.setItem('practice-questions', JSON.stringify(existing))
   ElMessage.success('已加入练习，返回练习页即可作答')
+}
+
+// ─── AI 分析 ───────────────────────────────────────────────────────────────
+const aiLoading = ref(false)
+const aiResult = ref('')
+
+async function doAiAnalyze() {
+  if (!result.value) return
+  aiLoading.value = true
+  try {
+    const wrongItemsPayload = wrongItems.value.map(x => ({
+      content: x.content,
+      knowledgePoint: x.knowledgePoint ?? null,
+      difficulty: x.difficulty ?? null,
+    }))
+    const res = await practiceApi.analyzeSession({
+      totalCount: result.value.items?.length ?? 0,
+      correctCount: result.value.correctCount ?? 0,
+      totalScore: result.value.totalScore ?? 0,
+      maxScore: result.value.maxScore ?? 0,
+      knowledgePoint: result.value.knowledgePoint ?? null,
+      typeName: result.value.typeName ?? null,
+      wrongItems: wrongItemsPayload,
+    })
+    aiResult.value = res.analysis
+  } catch {
+    ElMessage.error('AI 分析失败，请稍后再试')
+  } finally {
+    aiLoading.value = false
+  }
 }
 
 // ─── 求助教师 ────────────────────────────────────────────────────────────────
@@ -372,4 +429,40 @@ onMounted(() => {
   padding: 8px 10px;
   border-radius: 6px;
 }
+
+/* AI 分析 */
+.ai-analysis-block {
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 14px;
+  padding: 24px;
+}
+.ai-block-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #6b21a8;
+  margin-bottom: 16px;
+}
+.ai-block-content {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #1e293b;
+}
+.ai-block-content :deep(h1),
+.ai-block-content :deep(h2),
+.ai-block-content :deep(h3) {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 12px 0 6px;
+  color: #4c1d95;
+}
+.ai-block-content :deep(ul),
+.ai-block-content :deep(ol) {
+  padding-left: 20px;
+}
+.ai-block-content :deep(li) { margin-bottom: 4px; }
+.ai-block-content :deep(p) { margin: 6px 0; }
 </style>

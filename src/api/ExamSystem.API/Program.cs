@@ -1,18 +1,19 @@
-using System.Text;
-using System.Text.Json;
 using ExamSystem.API;
+using ExamSystem.API.Middleware;
+using ExamSystem.API.Validation;
 using ExamSystem.Application;
 using ExamSystem.Application.Common.Models;
 using ExamSystem.Infrastructure;
-using ExamSystem.API.Middleware;
 using FluentValidation;
-using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Any;
+using Microsoft.OpenApi.Models;
 using Serilog;
+using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
+using System.Text;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,7 +63,6 @@ builder.Services.AddControllers()
 
 // FluentValidation 自动验证
 builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>

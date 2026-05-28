@@ -59,6 +59,18 @@ const routes = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'my-favorites',
+        name: 'MyFavorites',
+        component: () => import('@/views/MyFavorites.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/views/Profile.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'messages',
         name: 'Messages',
         component: () => import('@/views/Messages.vue'),
