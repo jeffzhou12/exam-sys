@@ -120,8 +120,8 @@ const loadData = async () => {
       studentId: filters.studentId || undefined,
       knowledgePoint: filters.knowledgePoint || undefined,
     })
-    sessions.value = res.data.items
-    pagination.total = res.data.total
+    sessions.value = res.items
+    pagination.total = res.total
   } catch (e) {
     ElMessage.error('加载练习记录失败')
   } finally {

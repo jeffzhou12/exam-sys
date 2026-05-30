@@ -15,7 +15,9 @@ public record UpdateUserCommand(
     string? WeChatOpenId,
     string? WeChatUnionId,
     UserRole? Role = null,
-    Guid? TenantId = null);
+    Guid? TenantId = null,
+    string? EducationLevel = null,
+    List<string>? InterestedSubjects = null);
 
 public class UpdateUserCommandHandler(IApplicationDbContext context)
 {
@@ -92,6 +94,13 @@ public class UpdateUserCommandHandler(IApplicationDbContext context)
 
         if (command.TenantId.HasValue)
             user.TenantId = command.TenantId.Value;
+
+        if (command.EducationLevel is not null)
+            user.EducationLevel = string.IsNullOrWhiteSpace(command.EducationLevel) ? null : command.EducationLevel;
+
+        if (command.InterestedSubjects is not null)
+            user.InterestedSubjects = command.InterestedSubjects;
+
         user.UpdatedAt = DateTime.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);

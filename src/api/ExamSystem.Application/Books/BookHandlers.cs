@@ -141,7 +141,10 @@ public class GetBooksQueryHandler(IApplicationDbContext db)
                 (b.Description != null && b.Description.Contains(q.Keyword)));
 
         if (!string.IsNullOrWhiteSpace(q.Tag))
-            query = query.Where(b => b.Tags != null && b.Tags.Contains(q.Tag));
+        {
+            var tagJson = JsonSerializer.Serialize(new[] { q.Tag });
+            query = query.Where(b => b.Tags != null && EF.Functions.JsonContains(b.Tags, tagJson));
+        }
 
         var total = await query.CountAsync(ct);
         var items = await query

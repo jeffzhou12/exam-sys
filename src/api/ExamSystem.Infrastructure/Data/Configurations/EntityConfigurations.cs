@@ -114,9 +114,14 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.EducationLevel).HasMaxLength(50);
         builder.Property(u => u.InterestedSubjects)
             .HasColumnType("jsonb")
+            .IsRequired(false)
             .HasConversion(
-                v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>());
+                v => v == null || v.Count == 0
+                    ? null
+                    : System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                v => string.IsNullOrEmpty(v)
+                    ? new List<string>()
+                    : System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>());
     }
 }
 

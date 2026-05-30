@@ -6,6 +6,21 @@ export const meApi = {
 
   /** 更新个人资料 */
   updateProfile: (data) => request.patch('/profile', data, { withTenant: true }),
+
+  /** 上传头像（FormData，字段名 file） */
+  uploadAvatar: (formData) => request.post('/profile/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    withTenant: true,
+  }),
+
+  /** 发送换绑手机验证码（target: 新手机号） */
+  sendChangePhoneCode: (target) => request.post('/auth/send-code', { target, purpose: 'change_phone' }),
+
+  /** 换绑手机 */
+  changePhone: (data) => request.post('/profile/change-phone', data, { withTenant: true }),
+
+  /** 修改密码 */
+  changePassword: (data) => request.post('/profile/change-password', data, { withTenant: true }),
 }
 
 // 预设学历选项

@@ -29,7 +29,9 @@ public record UserDto(
     UserRole Role,
     bool IsActive,
     DateTime? LastLoginAt,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? EducationLevel = null,
+    List<string>? InterestedSubjects = null);
 
 public class GetUsersQueryHandler(IApplicationDbContext context)
 {
@@ -68,7 +70,7 @@ public class GetUsersQueryHandler(IApplicationDbContext context)
             .Select(u => new UserDto(
                 u.Id, u.TenantId, u.Tenant != null ? u.Tenant.Name : null,
                 u.Username, u.Nickname, u.AvatarUrl, u.Email, u.PhoneNumber, u.Gender, u.Address, u.WeChatOpenId, u.WeChatUnionId,
-                u.Role, u.IsActive, u.LastLoginAt, u.CreatedAt))
+                u.Role, u.IsActive, u.LastLoginAt, u.CreatedAt, u.EducationLevel, u.InterestedSubjects))
             .ToListAsync(cancellationToken);
 
         return PaginatedResult<UserDto>.Create(items, query.Page, query.PageSize, totalCount);

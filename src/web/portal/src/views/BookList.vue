@@ -198,7 +198,7 @@ onMounted(fetchBooks)
 /* ── 图书网格 ─────────────────────────────────────────── */
 .book-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 22px;
   min-height: 300px;
 }
@@ -259,7 +259,11 @@ onMounted(fetchBooks)
   bottom: 8px;
   background: rgba(255,255,255,0.92);
   border-radius: 50%;
-  padding: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   z-index: 2;
   backdrop-filter: blur(4px);
@@ -303,7 +307,7 @@ onMounted(fetchBooks)
   .book-list-page { padding: 24px 16px 48px; }
   .filter-bar { flex-direction: column; align-items: stretch; }
   .filter-input, .filter-select { width: 100%; }
-  .book-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .book-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .book-cover { height: 180px; }
 }
 </style>

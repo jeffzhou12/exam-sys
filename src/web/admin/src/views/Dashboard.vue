@@ -4,7 +4,7 @@
     <!-- 欢迎横幅 -->
     <div class="welcome-bar">
       <div>
-        <h2 class="welcome-title">你好，{{ auth.user?.username }} 👋</h2>
+        <h2 class="welcome-title">你好，{{ auth.user?.displayName || auth.user?.username }} 👋</h2>
         <div class="welcome-sub">
           {{ todayStr }}
           <el-tag size="small" :type="roleTagType" class="welcome-role">{{ roleLabel }}</el-tag>

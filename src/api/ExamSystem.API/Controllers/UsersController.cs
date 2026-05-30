@@ -108,7 +108,9 @@ public class UsersController(
             request.WeChatOpenId,
             request.WeChatUnionId,
             request.Role,
-            tenantId), cancellationToken);
+            tenantId,
+            request.EducationLevel,
+            request.InterestedSubjects), cancellationToken);
         return NoContent();
     }
 
@@ -163,5 +165,7 @@ public record UpdateUserRequest(
     string? WeChatOpenId,
     string? WeChatUnionId,
     UserRole? Role,
+    string? EducationLevel = null,
+    List<string>? InterestedSubjects = null,
     Guid? TenantId = null);
 public record AdminResetPasswordRequest(string NewPassword);

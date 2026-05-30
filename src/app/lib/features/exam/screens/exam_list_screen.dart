@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../stores/auth_store.dart';
 
 class ExamListScreen extends ConsumerWidget {
   const ExamListScreen({super.key});
@@ -9,6 +10,14 @@ class ExamListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+
+    void requireLogin(VoidCallback action) {
+      if (ref.read(authStoreProvider).isLoggedIn) {
+        action();
+      } else {
+        context.go('/login?redirect=${Uri.encodeComponent('/exams')}');
+      }
+    }
 
     return Scaffold(
       backgroundColor: cs.surfaceContainerLowest,
@@ -58,7 +67,7 @@ class ExamListScreen extends ConsumerWidget {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             sliver: SliverToBoxAdapter(
-              child: _FeaturedExamCard(cs: cs, tt: tt),
+              child: _FeaturedExamCard(cs: cs, tt: tt, requireLogin: requireLogin),
             ),
           ),
 
@@ -74,7 +83,7 @@ class ExamListScreen extends ConsumerWidget {
                 tags: const ['60 分钟', '30 题'],
                 actionLabel: '继续',
                 actionIcon: Icons.play_arrow,
-                onAction: () => context.go('/exams/1/room'),
+                onAction: () => requireLogin(() => context.go('/exams/1/room')),
                 onCardTap: () => context.go('/exams/1/detail'),
                 cs: cs,
                 tt: tt,
@@ -94,7 +103,7 @@ class ExamListScreen extends ConsumerWidget {
                 tags: const ['90 分钟', '25 题'],
                 actionLabel: '开始',
                 actionIcon: Icons.start,
-                onAction: () => context.go('/exams/2/detail'),
+                onAction: () => requireLogin(() => context.go('/exams/2/detail')),
                 onCardTap: () => context.go('/exams/2/detail'),
                 cs: cs,
                 tt: tt,
@@ -121,7 +130,8 @@ class ExamListScreen extends ConsumerWidget {
 class _FeaturedExamCard extends StatelessWidget {
   final ColorScheme cs;
   final TextTheme tt;
-  const _FeaturedExamCard({required this.cs, required this.tt});
+  final void Function(VoidCallback) requireLogin;
+  const _FeaturedExamCard({required this.cs, required this.tt, required this.requireLogin});
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +190,7 @@ class _FeaturedExamCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: () => context.go('/exams/1/detail'),
+              onPressed: () => requireLogin(() => context.go('/exams/1/detail')),
               style: FilledButton.styleFrom(
                 backgroundColor: cs.onPrimary,
                 foregroundColor: cs.primary,

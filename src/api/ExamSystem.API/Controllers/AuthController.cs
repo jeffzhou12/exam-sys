@@ -48,7 +48,8 @@ public class AuthController(
 
         await authProtectionService.AssertSendCodeAllowedAsync(request.Target.Trim(), request.CaptchaToken, cancellationToken);
 
-        var devCode = await codeService.SendCodeAsync(request.Target.Trim(), "login", cancellationToken);
+        var scene = string.IsNullOrWhiteSpace(request.Purpose) ? "login" : request.Purpose.Trim().ToLower();
+        var devCode = await codeService.SendCodeAsync(request.Target.Trim(), scene, cancellationToken);
         var msg = request.Target.Contains('@') ? "验证码已发送至邮箱" : "验证码已发送至手机";
         return Ok(new { message = msg, devCode });
     }
@@ -175,7 +176,7 @@ public class AuthController(
 }
 
 public record LoginRequest(string Identifier, string Password, string? CaptchaToken = null);
-public record SendCodeRequest(string Target, string? CaptchaToken = null);
+public record SendCodeRequest(string Target, string? CaptchaToken = null, string? Purpose = null);
 public record CodeLoginRequest(string Target, string Code, Guid? TenantId, string? Role, string? Nickname, string? CaptchaToken = null);
 public record RegisterRequest(
     Guid? TenantId,

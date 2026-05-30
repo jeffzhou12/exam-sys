@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../stores/auth_store.dart';
 
-class ExamDetailScreen extends StatefulWidget {
+class ExamDetailScreen extends ConsumerStatefulWidget {
   final String examId;
   const ExamDetailScreen({super.key, required this.examId});
 
   @override
-  State<ExamDetailScreen> createState() => _ExamDetailScreenState();
+  ConsumerState<ExamDetailScreen> createState() => _ExamDetailScreenState();
 }
 
-class _ExamDetailScreenState extends State<ExamDetailScreen> {
+class _ExamDetailScreenState extends ConsumerState<ExamDetailScreen> {
   bool _agreedToRules = false;
 
   @override
@@ -181,7 +183,15 @@ class _ExamDetailScreenState extends State<ExamDetailScreen> {
             child: SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: _agreedToRules ? () => context.go('/exams/${widget.examId}/room') : null,
+                onPressed: _agreedToRules
+                    ? () {
+                        if (ref.read(authStoreProvider).isLoggedIn) {
+                          context.go('/exams/${widget.examId}/room');
+                        } else {
+                          context.go('/login?redirect=${Uri.encodeComponent('/exams/${widget.examId}/detail')}');
+                        }
+                      }
+                    : null,
                 icon: const Icon(Icons.play_circle_outline, size: 20),
                 label: const Text('开始考试'),
                 style: FilledButton.styleFrom(

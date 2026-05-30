@@ -346,3 +346,47 @@ public class GetPracticeHistoryQueryHandler(IApplicationDbContext context)
             .ToListAsync(cancellationToken);
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 删除练习记录（单条）
+// ─────────────────────────────────────────────────────────────────────────────
+
+public record DeletePracticeSessionCommand(Guid TenantId, string StudentId, Guid SessionId);
+
+public class DeletePracticeSessionCommandHandler(IApplicationDbContext context)
+{
+    public async Task<bool> Handle(DeletePracticeSessionCommand command, CancellationToken cancellationToken = default)
+    {
+        var session = await context.PracticeSessions
+            .FirstOrDefaultAsync(
+                p => p.Id == command.SessionId
+                  && p.TenantId == command.TenantId
+                  && p.StudentId == command.StudentId,
+                cancellationToken);
+
+        if (session is null) return false;
+
+        context.PracticeSessions.Remove(session);
+        await context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 清除全部练习记录（当前用户）
+// ─────────────────────────────────────────────────────────────────────────────
+
+public record ClearPracticeSessionsCommand(Guid TenantId, string StudentId);
+
+public class ClearPracticeSessionsCommandHandler(IApplicationDbContext context)
+{
+    public async Task Handle(ClearPracticeSessionsCommand command, CancellationToken cancellationToken = default)
+    {
+        var sessions = await context.PracticeSessions
+            .Where(p => p.TenantId == command.TenantId && p.StudentId == command.StudentId)
+            .ToListAsync(cancellationToken);
+
+        context.PracticeSessions.RemoveRange(sessions);
+        await context.SaveChangesAsync(cancellationToken);
+    }
+}

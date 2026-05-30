@@ -20,6 +20,8 @@ public class PracticeController(
     GetQuestionAnswerQueryHandler getAnswerHandler,
     SavePracticeSessionCommandHandler saveSessionHandler,
     GetPracticeHistoryQueryHandler getHistoryHandler,
+    DeletePracticeSessionCommandHandler deleteSessionHandler,
+    ClearPracticeSessionsCommandHandler clearSessionsHandler,
     SaveWrongBookItemCommandHandler saveWrongBookHandler,
     GetAdminWrongBookQueryHandler adminWrongBookHandler,
     GetAdminPracticeSessionsQueryHandler adminPracticeSessionsHandler,
@@ -166,6 +168,46 @@ public class PracticeController(
             cancellationToken);
 
         return Ok(result);
+    }
+
+    /// <summary>删除指定练习记录</summary>
+    [HttpDelete("sessions/{sessionId:guid}")]
+    public async Task<IActionResult> DeleteSession(
+        Guid sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        if (TenantId is null)
+            return BadRequest(new { error = "无法确定租户。" });
+
+        var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                     ?? User.FindFirstValue("sub")
+                     ?? User.FindFirstValue("id");
+        if (studentId is null) return Unauthorized();
+
+        var deleted = await deleteSessionHandler.Handle(
+            new DeletePracticeSessionCommand(TenantId.Value, studentId, sessionId),
+            cancellationToken);
+
+        return deleted ? NoContent() : NotFound();
+    }
+
+    /// <summary>清除当前用户全部练习记录</summary>
+    [HttpDelete("sessions")]
+    public async Task<IActionResult> ClearSessions(CancellationToken cancellationToken = default)
+    {
+        if (TenantId is null)
+            return BadRequest(new { error = "无法确定租户。" });
+
+        var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                     ?? User.FindFirstValue("sub")
+                     ?? User.FindFirstValue("id");
+        if (studentId is null) return Unauthorized();
+
+        await clearSessionsHandler.Handle(
+            new ClearPracticeSessionsCommand(TenantId.Value, studentId),
+            cancellationToken);
+
+        return NoContent();
     }
 
     // ─── 错题本 ────────────────────────────────────────────────────────────────

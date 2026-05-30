@@ -17,13 +17,7 @@
         <!-- 主导航 -->
         <nav class="nav-links">
           <router-link to="/" :class="{ active: $route.name === 'Home' }">首页</router-link>
-          <router-link to="/exams" :class="{ active: $route.name === 'ExamList' }">考试中心</router-link>    
-          <router-link
-            v-if="auth.isLoggedIn && auth.isStudent"
-            to="/my-results"
-            :class="{ active: $route.name === 'MyResults' }">
-            我的成绩
-          </router-link>
+          <router-link to="/exams" :class="{ active: $route.name === 'ExamList' }">考试中心</router-link>
           <router-link
             v-if="auth.isLoggedIn"
             to="/practice"
@@ -31,21 +25,9 @@
             在线练习
           </router-link>
           <router-link
-            v-if="auth.isLoggedIn"
-            to="/wrong-book"
-            :class="{ active: $route.name === 'WrongBook' }">
-            错题本
-          </router-link>
-          <router-link
             to="/books"
             :class="{ active: $route.name === 'BookList' }">
             图书馆
-          </router-link>
-          <router-link
-            v-if="auth.isLoggedIn"
-            to="/messages"
-            :class="{ active: $route.name === 'Messages' }">
-            <span>站内信</span>
           </router-link>
           <router-link
             v-if="auth.isTeacher"
@@ -97,29 +79,26 @@
           <template v-if="auth.isLoggedIn">
             <el-dropdown trigger="click" @command="handleCommand">
               <div class="user-trigger">
-                <el-avatar :size="32" class="user-avatar">
-                  {{ auth.user?.username?.[0]?.toUpperCase() }}
+                <el-avatar :size="32" :src="auth.user?.avatarUrl || undefined" class="user-avatar">
+                  {{ (auth.user?.displayName || auth.user?.username)?.[0]?.toUpperCase() }}
                 </el-avatar>
-                <span class="username">{{ auth.user?.username }}</span>
+                <span class="username">{{ auth.user?.displayName || auth.user?.username }}</span>
                 <el-icon class="arrow-icon"><ArrowDown /></el-icon>
               </div>
               <template #dropdown>
                 <el-dropdown-menu>
                   <div class="dropdown-user-info">
-                    <el-avatar :size="40" class="dropdown-avatar">
-                      {{ auth.user?.username?.[0]?.toUpperCase() }}
+                    <el-avatar :size="40" :src="auth.user?.avatarUrl || undefined" class="dropdown-avatar">
+                      {{ (auth.user?.displayName || auth.user?.username)?.[0]?.toUpperCase() }}
                     </el-avatar>
                     <div>
-                      <div class="dropdown-username">{{ auth.user?.username }}</div>
+                      <div class="dropdown-username">{{ auth.user?.displayName || auth.user?.username }}</div>
                       <el-tag size="small" :type="roleTagType" class="dropdown-role">{{ roleLabel }}</el-tag>
                     </div>
                   </div>
                   <el-divider style="margin: 6px 0" />
                   <el-dropdown-item v-if="auth.isStudent" command="results">
                     <el-icon><DataAnalysis /></el-icon> 我的成绩
-                  </el-dropdown-item>
-                  <el-dropdown-item command="practice">
-                    <el-icon><Memo /></el-icon> 在线练习
                   </el-dropdown-item>
                   <el-dropdown-item command="wrongBook">
                     <el-icon><Collection /></el-icon> 错题本
@@ -188,10 +167,11 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { tenantsApi } from '@/api/tenants'
+import { meApi } from '@/api/me'
 import { useThemeStore } from '@/stores/theme'
 import {
   ArrowDown, DataAnalysis, SwitchButton, Setting, Document,
-  Memo, Collection, Message, OfficeBuilding, Moon, Sunny, Star, User
+  Collection, Message, OfficeBuilding, Moon, Sunny, Star, User
 } from '@element-plus/icons-vue'
 import { redirectToAdmin } from '@/utils/adminRedirect'
 
@@ -262,6 +242,11 @@ onMounted(() => {
   window.addEventListener('scroll', onScroll)
   window.addEventListener('storage', onStorageChange)
   loadTenants()
+  if (auth.isLoggedIn) {
+    meApi.getProfile().then(data => {
+      if (data?.avatarUrl) auth.patchUser({ avatarUrl: data.avatarUrl })
+    }).catch(() => {})
+  }
 })
 
 onBeforeUnmount(() => {
@@ -331,7 +316,7 @@ onBeforeUnmount(() => {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 20px;
   flex: 1;
 }
 .nav-links a {

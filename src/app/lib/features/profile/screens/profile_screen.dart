@@ -164,6 +164,13 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     child: Column(children: [
                       _MenuItem(
+                        icon: Icons.edit_outlined,
+                        label: '编辑资料',
+                        onTap: () => context.push('/profile/edit'),
+                        cs: cs, tt: tt,
+                        showDivider: true,
+                      ),
+                      _MenuItem(
                         icon: Icons.bookmark_outline,
                         label: '我的收藏',
                         badge: '12',

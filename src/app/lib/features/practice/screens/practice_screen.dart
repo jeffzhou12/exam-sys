@@ -1,15 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../stores/auth_store.dart';
 
-class PracticeScreen extends StatefulWidget {
+class PracticeScreen extends ConsumerStatefulWidget {
   const PracticeScreen({super.key});
 
   @override
-  State<PracticeScreen> createState() => _PracticeScreenState();
+  ConsumerState<PracticeScreen> createState() => _PracticeScreenState();
 }
 
-class _PracticeScreenState extends State<PracticeScreen> {
+class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   int _currentIndex = 11; // 第12题 (0-based → display as 12)
   final int _total = 20;
   int? _selectedOption;
@@ -247,7 +249,15 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton(
-                    onPressed: _selectedOption != null ? () {} : null,
+                    onPressed: _selectedOption != null
+                        ? () {
+                            if (ref.read(authStoreProvider).isLoggedIn) {
+                              // 提交答案逻辑
+                            } else {
+                              context.go('/login?redirect=${Uri.encodeComponent('/practice')}');
+                            }
+                          }
+                        : null,
                     child: const Text('检查答案'),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12)),
@@ -267,7 +277,13 @@ class _PracticeScreenState extends State<PracticeScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/ai-analysis'),
+        onPressed: () {
+          if (ref.read(authStoreProvider).isLoggedIn) {
+            context.push('/ai-analysis');
+          } else {
+            context.go('/login?redirect=${Uri.encodeComponent('/practice')}');
+          }
+        },
         backgroundColor: cs.primaryContainer,
         foregroundColor: cs.primary,
         icon: const Icon(Icons.smart_toy_outlined, size: 18),

@@ -1,0 +1,59 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter App (Chrome)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/src/app",
+      "deviceId": "chrome",
+      "args": [
+        "--dart-define=API_BASE_URL=http://localhost:5146/api"
+      ]
+    },
+    {
+      "name": "Flutter App (Windows)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/src/app",
+      "deviceId": "windows",
+      "args": [
+        "--dart-define=API_BASE_URL=http://localhost:5146/api"
+      ]
+    },
+    {
+      "name": "Flutter App (Edge)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/src/app",
+      "deviceId": "edge",
+      "args": [
+        "--dart-define=API_BASE_URL=http://localhost:5146/api"
+      ]
+    },
+    {
+      "name": ".NET API (http)",
+      "request": "launch",
+      "type": "coreclr",
+      "program": "${workspaceFolder}/src/api/ExamSystem.API/bin/Debug/net8.0/ExamSystem.API.dll",
+      "cwd": "${workspaceFolder}/src/api/ExamSystem.API",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "preLaunchTask": "build-api"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "API + Flutter (Chrome)",
+      "configurations": [".NET API (http)", "Flutter App (Chrome)"]
+    },
+    {
+      "name": "API + Flutter (Windows)",
+      "configurations": [".NET API (http)", "Flutter App (Windows)"]
+    }
+  ]
+}

@@ -322,3 +322,6 @@ terraform apply
 | 考生前台 | ✅ 完成 | Vue 3 Portal（匿名浏览、登录注册、答题室、成绩查询），独立 CloudFront + S3 部署 |
 | CI/CD | ✅ 完成 | GitHub Actions 路径感知自动部署（后端 + Admin + Portal 三路径独立触发） |
 | 增强 | 🔄 规划中 | pgvector 题目去重、AI 能力报告、防作弊监控 |
+
+## APP设计
+https://stitch.withgoogle.com/projects/16094381661441729473

@@ -50,6 +50,8 @@ public static class DependencyInjection
         services.AddScoped<Users.Commands.AdminResetPasswordCommandHandler>();
         services.AddScoped<Users.Commands.GetMyProfileQueryHandler>();
         services.AddScoped<Users.Commands.UpdateMyProfileCommandHandler>();
+        services.AddScoped<Users.Commands.ChangeMyPasswordCommandHandler>();
+        services.AddScoped<Users.Commands.ChangeMyPhoneCommandHandler>();
 
         // 在线练习
         services.AddScoped<Practice.GetPracticeQuestionsQueryHandler>();
@@ -59,6 +61,8 @@ public static class DependencyInjection
         services.AddScoped<Practice.GetQuestionAnswerQueryHandler>();
         services.AddScoped<Practice.SavePracticeSessionCommandHandler>();
         services.AddScoped<Practice.GetPracticeHistoryQueryHandler>();
+        services.AddScoped<Practice.DeletePracticeSessionCommandHandler>();
+        services.AddScoped<Practice.ClearPracticeSessionsCommandHandler>();
         // 错题本 & 管理端练习查询
         services.AddScoped<Practice.SaveWrongBookItemCommandHandler>();
         services.AddScoped<Practice.GetAdminWrongBookQueryHandler>();
@@ -89,7 +93,8 @@ public static class DependencyInjection
         // 审计日志
         services.AddScoped<AuditLogs.GetAuditLogsQueryHandler>();
 
-        // AI 模型配置管理
+        // AI 模型配置管理 & AI 审计日志
+        services.AddScoped<AiConfigs.GetAiAuditLogsQueryHandler>();
         services.AddScoped<AiConfigs.GetAiModelConfigsQueryHandler>();
         services.AddScoped<AiConfigs.GetAiModelConfigByIdQueryHandler>();
         services.AddScoped<AiConfigs.CreateAiModelConfigCommandHandler>();

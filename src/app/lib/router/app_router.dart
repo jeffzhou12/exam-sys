@@ -10,6 +10,7 @@ import '../features/exam/screens/exam_room_screen.dart';
 import '../features/practice/screens/practice_screen.dart';
 import '../features/messages/screens/messages_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
+import '../features/profile/screens/edit_profile_screen.dart';
 import '../features/library/screens/library_screen.dart';
 import '../features/library/screens/book_detail_screen.dart';
 import '../features/library/screens/book_reader_screen.dart';
@@ -125,6 +126,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/favorites',
         builder: (context, state) => const FavoritesScreen(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => const EditProfileScreen(),
       ),
     ],
   );

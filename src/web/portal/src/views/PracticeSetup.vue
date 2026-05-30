@@ -208,6 +208,7 @@ async function syncHistoryFromServer() {
     const local = JSON.parse(localStorage.getItem('practice-history') || '[]')
     const localTimes = new Set(local.map(r => r.time))
     const fromServer = serverRecords.map(r => ({
+      id:             r.id,
       count:          r.count,
       correctRate:    r.correctRate,
       correctCount:   r.correctCount,
@@ -278,14 +279,20 @@ async function retryPractice(rec) {
 function deleteHistory(rec) {
   history.value = history.value.filter(x => x.time !== rec.time)
   localStorage.setItem('practice-history', JSON.stringify(history.value))
+  // 同步删除服务端记录
+  if (rec.id) {
+    practiceApi.deleteSession(rec.id).catch(() => {})
+  }
 }
 
 function clearAllHistory() {
   ElMessageBox.confirm('确定清除所有练习记录？', '清除确认', { type: 'warning' })
-    .then(() => {
+    .then(async () => {
       history.value = []
       localStorage.removeItem('practice-history')
       ElMessage.success('记录已清除')
+      // 同步清除服务端记录
+      await practiceApi.clearSessions().catch(() => {})
     })
     .catch(() => {})
 }

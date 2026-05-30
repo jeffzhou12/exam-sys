@@ -41,10 +41,11 @@ export const useAuthStore = defineStore('exam-auth', () => {
     token.value = result.accessToken
     const payload = parseJwt(result.accessToken)
     user.value = {
-      id:       payload?.sub || '',
-      username: result.username || payload?.unique_name || '',
-      role:     result.role || payload?.role || '',
-      tenantId: payload?.tenant_id || null,
+      id:          payload?.sub || '',
+      username:    result.username || payload?.unique_name || '',
+      displayName: result.displayName || result.username || payload?.unique_name || '',
+      role:        result.role || payload?.role || '',
+      tenantId:    payload?.tenant_id || null,
     }
     localStorage.setItem(TOKEN_KEY, token.value)
     localStorage.setItem(USER_KEY, JSON.stringify(user.value))
@@ -71,6 +72,12 @@ export const useAuthStore = defineStore('exam-auth', () => {
     }
   }
 
+  function patchUser(patch) {
+    if (!user.value) return
+    user.value = { ...user.value, ...patch }
+    localStorage.setItem(USER_KEY, JSON.stringify(user.value))
+  }
+
   function logout() {
     token.value            = ''
     user.value             = null
@@ -86,6 +93,6 @@ export const useAuthStore = defineStore('exam-auth', () => {
     token, user, isLoggedIn, tenantId, role,
     isSuperAdmin, isAdmin, isAnyAdmin, isTeacher, isStudent,
     activeTenantId, activeTenantName,
-    login, loginWithResult, logout, setActiveTenant,
+    login, loginWithResult, logout, setActiveTenant, patchUser,
   }
 })

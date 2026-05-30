@@ -91,6 +91,18 @@ const routes = [
         meta: { title: 'AI 模型配置', roles: ['SuperAdmin', 'Admin'] }
       },
       {
+        path: 'sms-templates',
+        name: 'SmsTemplates',
+        component: () => import('@/views/sms-templates/SmsTemplateList.vue'),
+        meta: { title: '短信模板', roles: ['SuperAdmin', 'Admin'] }
+      },
+      {
+        path: 'ai-audit-logs',
+        name: 'AiAuditLogs',
+        component: () => import('@/views/ai-audit-logs/AiAuditLogList.vue'),
+        meta: { title: 'AI 调用日志', roles: ['SuperAdmin'] }
+      },
+      {
         path: 'audit-logs',
         name: 'AuditLogs',
         component: () => import('@/views/audit-logs/AuditLogList.vue'),

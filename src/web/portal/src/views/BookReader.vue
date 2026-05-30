@@ -301,8 +301,14 @@
               v-model="aiDrawer.selectedText"
               type="textarea"
               :rows="3"
-              placeholder="框选区域文字（自动提取或手动输入）"
+              :placeholder="aiDrawer.imageBase64 && !aiDrawer.selectedText ? '未检测到可提取的文字（扫描页/图片字体），AI 将直接识别截图内容' : '框选区域文字（自动提取或手动输入）'"
             />
+            <div
+              v-if="aiDrawer.imageBase64 && !aiDrawer.selectedText"
+              style="font-size:12px;color:#f59e0b;margin-top:4px"
+            >
+              未能从此区域提取到文字，AI 将对截图进行 OCR 识别并分析。
+            </div>
           </el-form-item>
           <el-form-item label="提问">
             <el-input
@@ -809,32 +815,34 @@ async function extractTextFromRect(rect) {
   // ── 方案 A：从已渲染的 textLayer DOM 直接提取 ─────────────────────────
   if (textLayerEl.value) {
     const tlDiv = textLayerEl.value
-    const tlRect = tlDiv.getBoundingClientRect()
     const canvasEl = pdfCanvas.value
-    if (canvasEl && tlRect.width > 0) {
-      // 选区在 canvas 坐标系（像素）
-      const sx = rect.x * renderScale
-      const sy = rect.y * renderScale
-      const sw = rect.width  * renderScale
-      const sh = rect.height * renderScale
+    if (canvasEl) {
+      // 在循环外一次性计算 canvasRect，避免反复触发 reflow
+      const canvasRect = canvasEl.getBoundingClientRect()
+      if (canvasRect.width > 0) {
+        // 选区在 canvas 坐标系（像素）
+        const sx = rect.x * renderScale
+        const sy = rect.y * renderScale
+        const sw = rect.width  * renderScale
+        const sh = rect.height * renderScale
 
-      const spans = tlDiv.querySelectorAll('span[role="presentation"], span')
-      const words = []
-      for (const span of spans) {
-        if (!span.textContent?.trim()) continue
-        const sr = span.getBoundingClientRect()
-        const canvasRect = canvasEl.getBoundingClientRect()
-        // 将 span 转换到 canvas 坐标系
-        const spx = sr.left - canvasRect.left
-        const spy = sr.top  - canvasRect.top
-        const spw = sr.width
-        const sph = sr.height
-        // 交叉判断：两矩形相交
-        if (spx + spw < sx - 4 || spx > sx + sw + 4) continue
-        if (spy + sph < sy - 4 || spy > sy + sh + 4) continue
-        words.push(span.textContent)
+        const spans = tlDiv.querySelectorAll('span[role="presentation"], span')
+        const words = []
+        for (const span of spans) {
+          if (!span.textContent?.trim()) continue
+          const sr = span.getBoundingClientRect()
+          // 将 span 转换到 canvas 坐标系
+          const spx = sr.left - canvasRect.left
+          const spy = sr.top  - canvasRect.top
+          const spw = sr.width
+          const sph = sr.height
+          // 交叉判断（宽松容差 10px，兼容高 DPI / 缩放误差）
+          if (spx + spw < sx - 10 || spx > sx + sw + 10) continue
+          if (spy + sph < sy - 10 || spy > sy + sh + 10) continue
+          words.push(span.textContent)
+        }
+        if (words.length > 0) return words.join('').trim()
       }
-      if (words.length > 0) return words.join(' ').trim()
     }
   }
 
@@ -848,22 +856,21 @@ async function extractTextFromRect(rect) {
     for (const item of textContent.items) {
       if (!item.str?.trim()) continue
       // 应用仿射变换：[a, b, c, d, tx, ty]
-      const [a, b, c, d, tx, ty] = item.transform
+      const [a, , , d, tx, ty] = item.transform
       // 将 PDF 用户空间坐标转换到 viewport 坐标
-      const vpPt = pdfjsLib.Util.applyTransform([0, 0], viewport.transform)
       const pt   = pdfjsLib.Util.applyTransform([tx, ty], viewport.transform)
       const vpX  = pt[0]
       const vpY  = pt[1]
+      // item.width 为文本在用户空间的宽度（与 vpX 坐标系一致）
+      const itemW = Math.abs((item.width  || 0) * (a || 1))
       // item.height 是字体点数，近似为行高
       const itemH = Math.abs((item.height || 12) * (d || 1))
-      if (
-        vpX >= rect.x - 8 && vpX <= rect.x + rect.width  + 8 &&
-        vpY >= rect.y - itemH - 4 && vpY <= rect.y + rect.height + 4
-      ) {
-        words.push(item.str)
-      }
+      // 检查文本条目与选区是否交叉（包含从左侧延伸进来的情况）
+      if (vpX + itemW < rect.x - 10 || vpX > rect.x + rect.width + 10) continue
+      if (vpY + itemH < rect.y - 10 || vpY > rect.y + rect.height + 10) continue
+      words.push(item.str)
     }
-    return words.join(' ').trim()
+    return words.join('').trim()
   } catch {
     return ''
   }

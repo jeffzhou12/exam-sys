@@ -65,6 +65,16 @@
           <template #title>AI 模型配置</template>
         </el-menu-item>
 
+        <el-menu-item v-if="auth.isAnyAdmin" index="/sms-templates">
+          <el-icon><ChatLineSquare /></el-icon>
+          <template #title>短信模板</template>
+        </el-menu-item>
+
+        <el-menu-item v-if="auth.isSuperAdmin" index="/ai-audit-logs">
+          <el-icon><DataAnalysis /></el-icon>
+          <template #title>AI 调用日志</template>
+        </el-menu-item>
+
         <el-menu-item v-if="auth.isSuperAdmin" index="/audit-logs">
           <el-icon><Notebook /></el-icon>
           <template #title>审计日志</template>
@@ -124,7 +134,7 @@
           <el-dropdown @command="handleCommand">
             <div class="user-info">
               <el-avatar :size="32" :icon="UserFilled" />
-              <span class="username">{{ auth.user?.username }}</span>
+              <span class="username">{{ auth.user?.displayName || auth.user?.username }}</span>
               <el-tag size="small" :type="roleTagType">{{ roleLabel }}</el-tag>
             </div>
             <template #dropdown>
@@ -161,7 +171,8 @@ import { useThemeStore } from '@/stores/theme'
 import {
   DataBoard, OfficeBuilding, User, Document, QuestionFilled,
   Expand, Fold, UserFilled, SwitchButton, School, Reading,
-  ChatDotRound, Notebook, Setting, Moon, Sunny, Histogram, CollectionTag
+  ChatDotRound, Notebook, Setting, Moon, Sunny, Histogram, CollectionTag,
+  ChatLineSquare, DataAnalysis
 } from '@element-plus/icons-vue'
 
 const theme = useThemeStore()

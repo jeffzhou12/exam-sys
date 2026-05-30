@@ -52,6 +52,7 @@
               {{ '★'.repeat(currentQ.difficulty) }} 难度 {{ currentQ.difficulty }}
             </el-tag>
             <span v-if="currentQ.knowledgePoint" class="kp-tag">{{ currentQ.knowledgePoint }}</span>
+            <FavoriteButton :target-type="1" :target-id="currentQ.id" style="margin-left:auto" />
           </div>
 
           <RichContent class="question-content" :content="currentQ.content" />
@@ -188,6 +189,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, ArrowRight, Loading, QuestionFilled, ChatDotRound, MagicStick } from '@element-plus/icons-vue'
 import { practiceApi } from '@/api/practice'
+import FavoriteButton from '@/components/FavoriteButton.vue'
 import SimilarQuestions from '@/components/SimilarQuestions.vue'
 import AiExplain from '@/components/AiExplain.vue'
 import SendMessageDialog from '@/components/SendMessageDialog.vue'

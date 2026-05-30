@@ -109,8 +109,8 @@ const loadData = async () => {
       studentId: filters.studentId || undefined,
       knowledgePoint: filters.knowledgePoint || undefined,
     })
-    items.value = res.data.items
-    pagination.total = res.data.total
+    items.value = res.items
+    pagination.total = res.total
   } catch (e) {
     ElMessage.error('加载错题本数据失败')
   } finally {

@@ -4,6 +4,7 @@ import 'models/exam_models.dart';
 import 'models/question_models.dart';
 import 'models/message_models.dart';
 import 'models/book_models.dart';
+import 'models/profile_models.dart';
 
 final _dio = createDio();
 
@@ -221,3 +222,28 @@ final messagesApi = MessagesApi();
 final booksApi = BooksApi();
 final favoritesApi = FavoritesApi();
 final wrongBookApi = WrongBookApi();
+final profileApi = ProfileApi();
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+class ProfileApi {
+  Future<UserProfile> getProfile() async {
+    final res = await _dio.get<Map<String, dynamic>>('/profile');
+    return UserProfile.fromJson(res.data!);
+  }
+
+  Future<void> updateProfile({
+    String? nickname,
+    String? gender,
+    String? address,
+    String? educationLevel,
+    List<String>? interestedSubjects,
+  }) async {
+    await _dio.patch('/profile', data: {
+      if (nickname != null) 'nickname': nickname,
+      if (gender != null) 'gender': gender,
+      if (address != null) 'address': address,
+      if (educationLevel != null) 'educationLevel': educationLevel,
+      if (interestedSubjects != null) 'interestedSubjects': interestedSubjects,
+    });
+  }
+}

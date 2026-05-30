@@ -36,6 +36,14 @@ export const practiceApi = {
   saveWrongBookItem: (questionId, answerGiven = '') =>
     request.post('/practice/wrong-book', { questionId, answerGiven }, { withTenant: true }),
 
+  /** 删除指定练习记录 */
+  deleteSession: (sessionId) =>
+    request.delete(`/practice/sessions/${sessionId}`, { withTenant: true }),
+
+  /** 清除当前用户全部练习记录 */
+  clearSessions: () =>
+    request.delete('/practice/sessions', { withTenant: true }),
+
   /** AI 智能分析本次练习成绩 */
   analyzeSession: (data) =>
     request.post('/practice/analyze', data, { withTenant: true }),

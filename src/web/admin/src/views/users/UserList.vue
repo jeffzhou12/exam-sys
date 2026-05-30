@@ -66,8 +66,8 @@
     </el-card>
 
     <!-- 新建/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑用户' : '新建用户'" width="500px" @closed="resetForm">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
+    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑用户' : '新建用户'" width="600px" @closed="resetForm">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
         <el-form-item v-if="auth.isSuperAdmin" label="所属租户" prop="tenantId">
           <el-select v-model="form.tenantId" placeholder="请选择租户" clearable style="width: 100%">
             <el-option v-for="t in tenants" :key="t.id" :label="t.name" :value="t.id" />
@@ -79,8 +79,35 @@
         <el-form-item v-if="!editingId" label="密码" prop="password">
           <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" />
         </el-form-item>
+        <el-form-item label="昵称" prop="nickname">
+          <el-input v-model="form.nickname" placeholder="请输入昵称" />
+        </el-form-item>
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="form.email" placeholder="请输入邮箱" />
+        </el-form-item>
+        <el-form-item label="手机号" prop="phoneNumber">
+          <el-input v-model="form.phoneNumber" placeholder="请输入手机号" />
+        </el-form-item>
+        <el-form-item label="性别" prop="gender">
+          <el-radio-group v-model="form.gender">
+            <el-radio value="男">男</el-radio>
+            <el-radio value="女">女</el-radio>
+            <el-radio value="保密">保密</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="地址" prop="address">
+          <el-input v-model="form.address" placeholder="请输入地址" />
+        </el-form-item>
+        <el-form-item label="学历" prop="educationLevel">
+          <el-select v-model="form.educationLevel" placeholder="请选择学历" clearable style="width: 100%">
+            <el-option v-for="lv in EDUCATION_LEVELS" :key="lv" :label="lv" :value="lv" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="感兴趣学科" prop="interestedSubjects">
+          <el-select v-model="form.interestedSubjects" multiple filterable allow-create default-first-option
+            placeholder="输入或选择学科，可多选" style="width: 100%">
+            <el-option v-for="s in SUBJECT_OPTIONS" :key="s" :label="s" :value="s" />
+          </el-select>
         </el-form-item>
         <el-form-item label="角色" prop="role">
           <el-radio-group v-model="form.role">
@@ -120,6 +147,9 @@ import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Refresh, Edit, Lock, Unlock, Key, Close, Check } from '@element-plus/icons-vue'
 
+const EDUCATION_LEVELS = ['小学', '初中', '高中', '大学', '研究生', '博士']
+const SUBJECT_OPTIONS = ['语文', '数学', '英语', '物理', '化学', '生物', '历史', '地理', '政治', '计算机']
+
 const auth = useAuthStore()
 
 // 当超级管理员切换租户时自动重新加载
@@ -138,7 +168,10 @@ const formRef = ref(null)
 const pwdFormRef = ref(null)
 
 const query = reactive({ page: 1, pageSize: 20, search: '', role: null, isActive: null })
-const form = reactive({ tenantId: null, username: '', password: '', email: '', role: 2 })
+const form = reactive({
+  tenantId: null, username: '', password: '', email: '', role: 2,
+  nickname: '', phoneNumber: '', gender: '', address: '', educationLevel: '', interestedSubjects: []
+})
 const pwdForm = reactive({ newPassword: '' })
 
 const rules = {
@@ -198,6 +231,12 @@ function openDialog(row = null) {
     form.tenantId = row.tenantId || null
     form.email = row.email || ''
     form.role = row.role
+    form.nickname = row.nickname || ''
+    form.phoneNumber = row.phoneNumber || ''
+    form.gender = row.gender || ''
+    form.address = row.address || ''
+    form.educationLevel = row.educationLevel || ''
+    form.interestedSubjects = row.interestedSubjects || []
   } else {
     editingId.value = null
     // 普通管理员新建用户时自动归属自己的租户
@@ -206,6 +245,12 @@ function openDialog(row = null) {
     form.password = ''
     form.email = ''
     form.role = 2
+    form.nickname = ''
+    form.phoneNumber = ''
+    form.gender = ''
+    form.address = ''
+    form.educationLevel = ''
+    form.interestedSubjects = []
   }
   dialogVisible.value = true
 }
@@ -221,7 +266,16 @@ async function handleSubmit() {
   submitting.value = true
   try {
     if (editingId.value) {
-      const payload = { email: form.email, role: form.role }
+      const payload = {
+        email: form.email,
+        role: form.role,
+        nickname: form.nickname || null,
+        phoneNumber: form.phoneNumber || null,
+        gender: form.gender || null,
+        address: form.address || null,
+        educationLevel: form.educationLevel || null,
+        interestedSubjects: form.interestedSubjects
+      }
       if (auth.isSuperAdmin) payload.tenantId = form.tenantId
       await usersApi.update(editingId.value, payload)
       ElMessage.success('更新成功')
@@ -231,7 +285,11 @@ async function handleSubmit() {
         username: form.username,
         password: form.password,
         email: form.email,
-        role: form.role
+        role: form.role,
+        nickname: form.nickname || null,
+        phoneNumber: form.phoneNumber || null,
+        gender: form.gender || null,
+        address: form.address || null
       })
       ElMessage.success('创建成功')
     }
