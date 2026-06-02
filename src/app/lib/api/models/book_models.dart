@@ -25,7 +25,7 @@ class Book {
         id: json['id'].toString(),
         title: json['title'] as String,
         author: json['author'] as String?,
-        coverUrl: json['coverUrl'] as String?,
+        coverUrl: json['coverImageUrl'] as String? ?? json['coverUrl'] as String?,
         description: json['description'] as String?,
         pageCount: json['pageCount'] as int?,
         category: json['category'] as String?,

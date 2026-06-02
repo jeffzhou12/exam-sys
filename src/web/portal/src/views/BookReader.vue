@@ -137,6 +137,17 @@
               >
                 <el-icon><EditPen /></el-icon>
               </button>
+              <!-- AI 标注叠加按钮 -->
+              <button
+                v-for="ann in currentAiAnns"
+                :key="'ai-' + ann.id"
+                class="ai-overlay-btn"
+                :style="getNoteOverlayStyle(ann)"
+                @click.stop="openAiAnnotationPopup(ann)"
+                title="查看 AI 解析"
+              >
+                <el-icon><MagicStick /></el-icon>
+              </button>
             </template>
           </div>
         </div>
@@ -196,7 +207,12 @@
               <div v-if="ann.note" class="ann-note" v-html="ann.note" />
               <div v-if="ann.annotationType === 3" class="ann-qa">
                 <div class="ann-q"><b>Q：</b>{{ ann.aiQuestion }}</div>
-                <div class="ann-a"><b>A：</b>{{ ann.aiAnswer }}</div>
+                <div class="ann-a" :class="{ 'ann-a--expanded': expandedAiIds.has(ann.id) }">
+                  <b>A：</b>{{ ann.aiAnswer }}
+                </div>
+                <button class="ann-expand-btn" @click.stop="toggleAiExpand(ann.id)">
+                  {{ expandedAiIds.has(ann.id) ? '收起 ↑' : '展开全部 ↓' }}
+                </button>
               </div>
             </div>
             <el-empty
@@ -258,7 +274,7 @@
     </el-dialog>
 
     <!-- 备注查看弹窗（点击 PDF 高亮上的按钮触发） -->
-    <el-dialog v-model="notePopup.visible" title="备注内容" width="440px" destroy-on-close>
+    <el-dialog v-model="notePopup.visible" title="备注内容" width="70%" top="6vh" class="scrollable-dialog" :append-to-body="false" destroy-on-close>
       <div v-if="notePopup.ann" class="note-popup-view">
         <div class="note-popup-meta">
           <span
@@ -272,6 +288,24 @@
       <template #footer>
         <el-button @click="notePopup.visible = false">关闭</el-button>
         <el-button type="primary" @click="editNoteFromPopup(notePopup.ann)">编辑</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- AI 标注查看弹窗（点击 PDF 高亮上的 AI 角标触发） -->
+    <el-dialog v-model="aiAnnotationPopup.visible" title="AI 解析内容" width="70%" top="6vh" class="scrollable-dialog" :append-to-body="false" destroy-on-close>
+      <div v-if="aiAnnotationPopup.ann" class="ai-popup-view">
+        <div class="ai-popup-meta">
+          <el-tag type="primary" size="small">AI 问答</el-tag>
+          <span class="note-popup-page">第 {{ aiAnnotationPopup.ann.pageNumber }} 页</span>
+        </div>
+        <div v-if="aiAnnotationPopup.ann.aiQuestion" class="ai-popup-question">
+          <span class="ai-popup-label">问题</span>
+          <div class="ai-popup-question-text">{{ aiAnnotationPopup.ann.aiQuestion }}</div>
+        </div>
+        <div class="ai-popup-answer ai-answer-content" v-html="renderMarkdown(aiAnnotationPopup.ann.aiAnswer || '')" />
+      </div>
+      <template #footer>
+        <el-button @click="aiAnnotationPopup.visible = false">关闭</el-button>
       </template>
     </el-dialog>
 
@@ -310,13 +344,16 @@
               未能从此区域提取到文字，AI 将对截图进行 OCR 识别并分析。
             </div>
           </el-form-item>
-          <el-form-item label="提问">
+          <el-form-item label="提问" required>
             <el-input
               v-model="aiDrawer.question"
               type="textarea"
               :rows="2"
-              placeholder="输入你的问题（留空则让 AI 自由分析）"
+              placeholder="请输入你的问题"
+              :class="{ 'is-error': aiDrawer.questionError }"
+              @input="aiDrawer.questionError = false"
             />
+            <div v-if="aiDrawer.questionError" class="ai-field-error">提问不能为空，请输入你的问题</div>
           </el-form-item>
         </el-form>
         <el-button
@@ -421,11 +458,19 @@ const lastReadPos = ref(null)
 
 // 备注查看弹窗（点击 PDF 高亮按钮时显示）
 const notePopup = reactive({ visible: false, ann: null })
+const aiAnnotationPopup = reactive({ visible: false, ann: null })
 
 // 当前页面的备注标注（用于渲染叠加按钮）
 const currentNoteAnns = computed(() =>
   annotations.value.filter(a =>
     a.pageNumber === currentPage.value && a.annotationType === 2 && a.positionJson
+  )
+)
+
+// 当前页面的 AI 标注（用于渲染叠加按钮）
+const currentAiAnns = computed(() =>
+  annotations.value.filter(a =>
+    a.pageNumber === currentPage.value && a.annotationType === 3 && a.positionJson
   )
 )
 
@@ -566,8 +611,11 @@ async function buildTextLayer(page, viewport, scale) {
     await tl.render()
   } else {
     const textContent = await page.getTextContent()
-    const task = pdfjsLib.renderTextLayer({ textContent, container: tlDiv, viewport, textDivs: [] })
-    await (task.promise ?? task)
+    for (const item of textContent.items || []) {
+      const span = document.createElement('span')
+      span.textContent = item.str || ''
+      tlDiv.appendChild(span)
+    }
   }
 }
 
@@ -952,6 +1000,12 @@ const filteredAnnotations = computed(() => {
 })
 
 function annTypeLabel(t) { return { 1: '书签', 2: '备注', 3: 'AI问答' }[t] || '未知' }
+
+const expandedAiIds = reactive(new Set())
+function toggleAiExpand(id) {
+  if (expandedAiIds.has(id)) expandedAiIds.delete(id)
+  else expandedAiIds.add(id)
+}
 function annTypeTag(t)   { return { 1: 'warning', 2: 'success', 3: 'primary' }[t] || 'info' }
 
 async function clickAnnotation(ann) {
@@ -1138,10 +1192,16 @@ function noteLevelLabel(color) {
   return noteLevels.find(lv => lv.color === color)?.label ?? '备注'
 }
 
+function openAiAnnotationPopup(ann) {
+  aiAnnotationPopup.ann     = ann
+  aiAnnotationPopup.visible = true
+}
+
 // ── AI Drawer ──────────────────────────────────────────────────
 const aiDrawer = reactive({
   visible: false, pageNumber: 1, selectedText: '', question: '',
   answer: '', loading: false, saving: false, positionRects: null, imageBase64: null,
+  questionError: false,
 })
 
 // 取消AI问答时清空预览
@@ -1156,11 +1216,16 @@ function openAiDrawer() {
   aiDrawer.imageBase64   = null
   aiDrawer.question      = ''
   aiDrawer.answer        = ''
+  aiDrawer.questionError = false
   aiDrawer.visible       = true
 }
 
 async function runAiAnalyze() {
   if (!aiDrawer.selectedText.trim() && !aiDrawer.positionRects && !aiDrawer.imageBase64) return
+  if (!aiDrawer.question.trim()) {
+    aiDrawer.questionError = true
+    return
+  }
   aiDrawer.loading = true
   aiDrawer.answer  = ''
   try {
@@ -1633,6 +1698,9 @@ onBeforeUnmount(() => {
   border-radius: 6px;
   cursor: pointer;
   transition: background .15s, box-shadow .15s;
+  min-width: 0;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 .ann-item:hover { background: #f0f5ff; box-shadow: 0 1px 6px rgba(64,158,255,.12); }
 .ann-item--active { background: #ecf5ff; box-shadow: 0 0 0 2px #409eff; }
@@ -1650,9 +1718,34 @@ onBeforeUnmount(() => {
   border-left: 3px solid #ffe082;
 }
 .ann-note { font-size: 13px; color: #333; line-height: 1.6; }
-.ann-qa  { font-size: 12px; line-height: 1.7; }
-.ann-q   { color: #666; margin-bottom: 4px; }
-.ann-a   { color: #303133; }
+.ann-qa  { font-size: 12px; line-height: 1.7; overflow-wrap: break-word; word-break: break-all; }
+.ann-q   { color: #666; margin-bottom: 4px; white-space: pre-wrap; word-break: break-all; }
+.ann-a {
+  color: #303133;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+.ann-a--expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+.ann-expand-btn {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 11px;
+  color: #8b5cf6;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.ann-expand-btn:hover { color: #6d28d9; text-decoration: underline; }
 
 /* ── 颜色选择 ───────────────────────────────────────── */
 .color-row { display: flex; gap: 10px; align-items: center; }
@@ -1667,6 +1760,33 @@ onBeforeUnmount(() => {
 .ai-drawer-body { padding: 4px 4px 0; }
 .ai-answer-card { border-radius: 8px; background: #f7f9fc; }
 .ai-answer-content { font-size: 14px; line-height: 1.85; color: #303133; }
+.ai-field-error { font-size: 12px; color: #f56c6c; margin-top: 4px; line-height: 1.4; }
+
+/* ── AI 标注查看弹窗 ─────────────────────────────────────── */
+.ai-popup-view { display: flex; flex-direction: column; gap: 14px; }
+.ai-popup-meta { display: flex; align-items: center; gap: 10px; }
+.ai-popup-question {
+  background: #f5f3ff;
+  border-left: 3px solid #8b5cf6;
+  border-radius: 0 6px 6px 0;
+  padding: 8px 12px;
+}
+.ai-popup-label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #ede9fe;
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-bottom: 4px;
+}
+.ai-popup-question-text { font-size: 14px; color: #3b0764; line-height: 1.6; }
+.ai-popup-answer { margin-top: 2px; font-size: 14px; line-height: 1.85; color: #303133; }
+.ai-drawer-body :deep(.is-error .el-textarea__inner) {
+  border-color: #f56c6c;
+  box-shadow: 0 0 0 1px #f56c6c inset;
+}
 
 /* ── 上次阅读按钮 ─────────────────────────────────────────── */
 .last-read-btn {
@@ -1709,6 +1829,31 @@ onBeforeUnmount(() => {
 }
 .note-overlay-btn:hover {
   background: #2563eb;
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* ── AI 标注叠加按钮 ─────────────────────────────────────── */
+.ai-overlay-btn {
+  position: absolute;
+  z-index: 3;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(139,92,246,0.4);
+  background: rgba(109,40,217,0.85);
+  color: #ede9fe;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 1px 4px rgba(109,40,217,.45);
+  transition: transform 0.15s, background 0.15s;
+  transform: translate(-50%, -50%);
+}
+.ai-overlay-btn:hover {
+  background: #7c3aed;
   transform: translate(-50%, -50%) scale(1.2);
 }
 
@@ -1841,4 +1986,34 @@ onBeforeUnmount(() => {
 .slide-right-enter-from,
 .slide-right-leave-to    { transform: translateX(100%); }
 .ai-drawer-body {padding: 20px !important;}
+</style>
+
+<style>
+/* ── 备注/AI 弹窗高度约束（全局，因 el-dialog 默认 teleport 到 body） */
+.scrollable-dialog {
+  max-height: 88vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin-bottom: 0 !important;
+}
+.scrollable-dialog .el-dialog__body {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  min-height: 0 !important;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+.scrollable-dialog .el-dialog__body::-webkit-scrollbar {
+  width: 5px;
+}
+.scrollable-dialog .el-dialog__body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollable-dialog .el-dialog__body::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9999px;
+}
+.scrollable-dialog .el-dialog__body::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
 </style>

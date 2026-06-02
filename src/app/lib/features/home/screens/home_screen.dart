@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../api/api.dart';
+import '../../../api/models/exam_models.dart';
 import '../../../stores/auth_store.dart';
+import '../../../theme/app_theme.dart';
+
+final _recentExamsProvider = FutureProvider<List<ExamPaper>>((ref) async {
+  final result = await examsApi.getExams(pageSize: 5);
+  return result.items;
+});
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -89,7 +97,7 @@ class HomeScreen extends ConsumerWidget {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             sliver: SliverToBoxAdapter(
-              child: _UpcomingExamsCard(cs: cs, tt: tt),
+              child: const _UpcomingExamsCard(),
             ),
           ),
 
@@ -516,10 +524,98 @@ class _Tag extends StatelessWidget {
 }
 
 // ── 近期考试 ──────────────────────────────────────────────────────────────────
-class _UpcomingExamsCard extends StatelessWidget {
-  final ColorScheme cs;
-  final TextTheme tt;
-  const _UpcomingExamsCard({required this.cs, required this.tt});
+class _UpcomingExamsCard extends ConsumerWidget {
+  const _UpcomingExamsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final examsAsync = ref.watch(_recentExamsProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderWeak),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('近期考试', style: tt.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+              Icon(Icons.calendar_month, size: 18, color: cs.primary),
+            ],
+          ),
+          const SizedBox(height: 12),
+          examsAsync.when(
+            loading: () => const Center(child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )),
+            error: (_, __) => const Text('加载失败', style: TextStyle(color: AppColors.textSecondary)),
+            data: (exams) => exams.isEmpty
+                ? const Text('暂无考试', style: TextStyle(color: AppColors.textSecondary))
+                : Column(
+                    children: exams.take(3).map((exam) {
+                      final start = exam.startTime;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withAlpha(20),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(start != null ? '${start.month}月' : '-',
+                                      style: const TextStyle(fontSize: 11, color: AppColors.primary)),
+                                  Text(start != null ? '${start.day}' : '-',
+                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(exam.title,
+                                      style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis),
+                                  Text(exam.statusLabel,
+                                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right, size: 16, color: AppColors.textWeak),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => context.go('/exams'),
+              child: const Text('查看全部考试'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -567,61 +663,6 @@ class _UpcomingExamsCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ExamItem extends StatelessWidget {
-  final String month;
-  final String day;
-  final String title;
-  final String subtitle;
-  final ColorScheme cs;
-  final TextTheme tt;
-  const _ExamItem(
-      {required this.month,
-      required this.day,
-      required this.title,
-      required this.subtitle,
-      required this.cs,
-      required this.tt});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 44,
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          decoration: BoxDecoration(
-            color: cs.primaryContainer,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            children: [
-              Text(month, style: TextStyle(fontSize: 11, color: cs.primary)),
-              Text(day,
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: cs.primary)),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-              Text(subtitle,
-                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-            ],
-          ),
-        ),
-        Icon(Icons.timer_outlined, size: 16, color: cs.onSurfaceVariant),
-      ],
     );
   }
 }

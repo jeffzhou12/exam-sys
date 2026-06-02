@@ -346,3 +346,4 @@ onMounted(async () => {
 .ai-analysis-result :deep(p) {
   margin: 6px 0;
 }
+</style>

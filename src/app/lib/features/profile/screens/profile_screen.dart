@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../api/api.dart';
 import '../../../stores/auth_store.dart';
+import '../../../theme/app_theme.dart';
+
+final _profileProvider = FutureProvider((ref) => profileApi.getProfile());
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -11,6 +15,7 @@ class ProfileScreen extends ConsumerWidget {
     final auth = ref.watch(authStoreProvider);
     final cs   = Theme.of(context).colorScheme;
     final tt   = Theme.of(context).textTheme;
+    final profileAsync = auth.isLoggedIn ? ref.watch(_profileProvider) : null;
 
     if (!auth.isLoggedIn) {
       return Scaffold(
@@ -33,11 +38,12 @@ class ProfileScreen extends ConsumerWidget {
       );
     }
 
-    final username = auth.username ?? '用户';
+    final profile = profileAsync?.value;
+    final username = profile?.nickname ?? auth.username ?? '用户';
     final isTeacher = auth.role == 'Teacher';
 
     return Scaffold(
-      backgroundColor: cs.surfaceContainerLowest,
+      backgroundColor: AppColors.bgPage,
       body: CustomScrollView(
         slivers: [
           // ── AppBar ─────────────────────────────────────────────────
@@ -72,66 +78,42 @@ class ProfileScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: cs.surface,
+                      color: AppColors.bgCard,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: cs.outlineVariant),
+                      border: Border.all(color: AppColors.borderWeak),
                     ),
                     child: Row(
                       children: [
-                        // 头像
-                        Stack(
-                          children: [
-                            CircleAvatar(
-                              radius: 34,
-                              backgroundColor: cs.primaryContainer,
-                              child: Text(
-                                username[0].toUpperCase(),
-                                style: TextStyle(
-                                    fontSize: 26, fontWeight: FontWeight.bold, color: cs.primary),
-                              ),
-                            ),
-                            // 角标
-                            Positioned(
-                              bottom: 0, right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF59E0B),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: cs.surface, width: 1.5),
-                                ),
-                                child: const Icon(Icons.star, size: 10, color: Colors.white),
-                              ),
-                            ),
-                          ],
+                        CircleAvatar(
+                          radius: 34,
+                          backgroundColor: AppColors.primary.withAlpha(20),
+                          child: Text(
+                            username.isNotEmpty ? username[0].toUpperCase() : '?',
+                            style: const TextStyle(
+                                fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.primary),
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(children: [
-                                Text(username,
-                                    style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF59E0B).withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text('五星学者',
-                                      style: TextStyle(fontSize: 10, color: Color(0xFFF59E0B),
-                                          fontWeight: FontWeight.bold)),
-                                ),
-                              ]),
+                              Text(username,
+                                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: AppColors.textMain)),
                               const SizedBox(height: 4),
-                              Text(isTeacher ? '教师 · 知识分享者' : '学生 · 不断进步中',
-                                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                              if (profile?.email != null && profile!.email!.isNotEmpty)
+                                Text(profile.email!,
+                                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              if (profile?.phoneNumber != null && profile!.phoneNumber!.isNotEmpty)
+                                Text(profile!.phoneNumber!,
+                                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              if (profile?.email == null && profile?.phoneNumber == null)
+                                Text(isTeacher ? '教师账号' : '学生账号',
+                                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                             ],
                           ),
                         ),
-                        Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+                        const Icon(Icons.chevron_right, color: AppColors.textWeak),
                       ],
                     ),
                   ),
@@ -141,16 +123,16 @@ class ProfileScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: cs.surface,
+                      color: AppColors.bgCard,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: cs.outlineVariant),
+                      border: Border.all(color: AppColors.borderWeak),
                     ),
                     child: Row(children: [
-                      _StatItem(value: '24', label: '连续学习', unit: '天', cs: cs, tt: tt),
-                      Container(width: 1, height: 40, color: cs.outlineVariant),
-                      _StatItem(value: '1,208', label: '完成练习', unit: '题', cs: cs, tt: tt),
-                      Container(width: 1, height: 40, color: cs.outlineVariant),
-                      _StatItem(value: '92.5', label: '平均得分', unit: '分', cs: cs, tt: tt),
+                      _StatItem(value: '-', label: '连续学习', unit: '天', cs: cs, tt: tt),
+                      Container(width: 1, height: 40, color: AppColors.borderWeak),
+                      _StatItem(value: '-', label: '完成练习', unit: '题', cs: cs, tt: tt),
+                      Container(width: 1, height: 40, color: AppColors.borderWeak),
+                      _StatItem(value: '-', label: '平均得分', unit: '分', cs: cs, tt: tt),
                     ]),
                   ),
                   const SizedBox(height: 16),
@@ -158,9 +140,9 @@ class ProfileScreen extends ConsumerWidget {
                   // ── 功能菜单 ───────────────────────────────────────
                   Container(
                     decoration: BoxDecoration(
-                      color: cs.surface,
+                      color: AppColors.bgCard,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: cs.outlineVariant),
+                      border: Border.all(color: AppColors.borderWeak),
                     ),
                     child: Column(children: [
                       _MenuItem(

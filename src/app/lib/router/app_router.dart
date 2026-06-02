@@ -96,7 +96,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/exams/:id/room',
         builder: (context, state) => ExamRoomScreen(
-          examId: int.tryParse(state.pathParameters['id']!) ?? 0,
+          examId: state.pathParameters['id']!,
         ),
       ),
 

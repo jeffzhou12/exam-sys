@@ -18,15 +18,16 @@
         <!-- ── 题目收藏 ── -->
         <template v-if="activeType === FavoriteType.QUESTION">
           <div class="question-list">
-            <div v-for="(item, idx) in items" :key="item.favoriteId" class="question-card">
-              <div class="q-index">{{ idx + 1 }}</div>
-              <div class="q-body">
-                <div class="q-title" v-html="item.title" />
-                <div class="q-meta" v-if="item.subtitle">
-                  <el-tag size="small" type="info">{{ item.subtitle }}</el-tag>
+            <div v-for="(item, idx) in items" :key="item.favoriteId" class="q-item">
+              <div class="q-item-body">
+                <div class="q-item-header">
+                  <span class="q-num">{{ idx + 1 }}</span>
+                  <el-tag v-if="item.subtitle" size="small" type="primary" effect="plain">{{ item.subtitle }}</el-tag>
+                  <span class="q-item-date">{{ formatDate(item.createdAt) }} 收藏</span>
                 </div>
+                <div class="q-item-content" v-html="item.title" />
               </div>
-              <div class="q-actions">
+              <div class="q-item-ops">
                 <el-button size="small" type="primary" plain round @click="goQuestion(item.targetId)">去练习</el-button>
                 <el-button size="small" type="danger" plain round @click="removeFav(item)">取消收藏</el-button>
               </div>
@@ -56,20 +57,23 @@
         <!-- ── 图书收藏 ── -->
         <template v-else-if="activeType === FavoriteType.BOOK">
           <div class="book-grid">
-            <div v-for="item in items" :key="item.favoriteId" class="book-card">
+            <div v-for="item in items" :key="item.favoriteId" class="book-card" @click="$router.push(`/books/${item.targetId}`)">
               <div class="book-cover">
                 <div class="cover-placeholder">
-                  <el-icon size="40" color="#409eff"><Reading /></el-icon>
+                  <el-icon size="40" color="#3b82f6"><Reading /></el-icon>
+                  <span class="cover-title-text">{{ item.title }}</span>
                 </div>
               </div>
               <div class="book-info">
-                <div class="book-title">{{ item.title }}</div>
-                <div class="book-author text-muted" v-if="item.subtitle">{{ item.subtitle }}</div>
+                <div class="book-title" :title="item.title">{{ item.title }}</div>
+                <div v-if="item.subtitle" class="book-author">
+                  <el-icon><User /></el-icon>{{ item.subtitle }}
+                </div>
                 <div class="book-actions">
-                  <router-link :to="`/books/${item.targetId}/read`" style="display:inline-flex">
+                  <router-link :to="`/books/${item.targetId}`" style="display:inline-flex" @click.stop>
                     <el-button size="small" type="primary" round>立即阅读</el-button>
                   </router-link>
-                  <el-button size="small" type="danger" plain round @click="removeFav(item)">取消收藏</el-button>
+                  <el-button size="small" type="danger" plain round @click.stop="removeFav(item)">取消收藏</el-button>
                 </div>
               </div>
             </div>
@@ -98,7 +102,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { favoritesApi, FavoriteType } from '@/api/favorites'
 import { useRouter } from 'vue-router'
-import { Reading } from '@element-plus/icons-vue'
+import { Reading, User } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -139,6 +143,8 @@ async function removeFav(item) {
 function goQuestion(id) {
   router.push(`/practice?questionId=${id}`)
 }
+
+const formatDate = (iso) => iso ? new Date(iso).toLocaleDateString('zh-CN') : ''
 </script>
 
 <style scoped>
@@ -160,50 +166,51 @@ function goQuestion(id) {
 .empty-wrap { padding: 60px 0; }
 .pagination-wrap { display: flex; justify-content: center; margin-top: 40px; }
 
-/* ── 题目列表 ──────────────────────────────────────────── */
+/* ── 题目列表（参考错题本样式）──────────────────────────── */
 .question-list { display: flex; flex-direction: column; gap: 12px; }
-.question-card {
+.q-item {
   display: flex;
   align-items: flex-start;
   gap: 14px;
   background: #fff;
-  border: 1px solid #f1f5f9;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 16px 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  transition: all 0.25s ease;
+  transition: border-color 0.2s;
 }
-.question-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(29,78,216,0.08);
-  border-color: #bfdbfe;
+.q-item:hover { border-color: #bfdbfe; }
+.q-item-body { flex: 1; min-width: 0; }
+.q-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
 }
-.q-index {
+.q-num {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   background: linear-gradient(135deg, #1d4ed8, #3b82f6);
   color: #fff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  margin-top: 2px;
 }
-.q-body { flex: 1; min-width: 0; }
-.q-title {
+.q-item-date { margin-left: auto; font-size: 11px; color: #94a3b8; }
+.q-item-content {
   font-size: 14px;
-  line-height: 1.6;
-  color: #0f172a;
+  color: #1e293b;
+  line-height: 1.7;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
-.q-meta { margin-top: 6px; }
-.q-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; align-items: flex-end; }
+.q-item-ops { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; align-items: flex-end; }
 
 /* ── 考试卡片网格 ──────────────────────────────────────── */
 .exam-grid {
@@ -268,52 +275,80 @@ function goQuestion(id) {
   border-top: 1px solid #f8fafc;
 }
 
-/* ── 图书卡片网格 ──────────────────────────────────────── */
+/* ── 图书卡片网格（参考图书馆首页样式）────────────────── */
 .book-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 22px;
 }
 .book-card {
   background: #fff;
   border: 1px solid #f1f5f9;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   transition: all 0.25s ease;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
 }
 .book-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.1);
+  box-shadow: 0 10px 28px rgba(29,78,216,0.1);
+  transform: translateY(-5px);
   border-color: #bfdbfe;
 }
 .book-cover {
-  height: 140px;
+  width: 100%;
+  height: 230px;
+  overflow: hidden;
   background: linear-gradient(135deg, #eff6ff, #dbeafe);
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
-.book-info { padding: 14px; flex: 1; display: flex; flex-direction: column; }
-.book-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
-  line-height: 1.4;
+.cover-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 10px;
+  color: #3b82f6;
+  font-size: 12px;
+}
+.cover-title-text {
+  max-width: 80%;
+  text-align: center;
+  color: #3b82f6;
+  font-size: 12px;
+  font-weight: 500;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  margin-bottom: 4px;
+}
+.book-info { padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 6px; }
+.book-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.4;
 }
 .book-author {
-  font-size: 12px;
-  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #64748b;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
-.book-actions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 10px; }
+.book-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding-top: 10px; border-top: 1px solid #f8fafc; }
 .text-muted { color: var(--el-text-color-secondary); }
 
 /* ── 响应式 ──────────────────────────────────────────── */

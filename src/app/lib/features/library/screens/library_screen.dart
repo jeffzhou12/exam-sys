@@ -1,6 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../api/api.dart';
+import '../../../api/models/book_models.dart';
+import '../../../theme/app_theme.dart';
+
+final _booksProvider = FutureProvider<PagedResult<Book>>((ref) async {
+  return booksApi.getBooks(pageSize: 50);
+});
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -9,106 +16,87 @@ class LibraryScreen extends ConsumerStatefulWidget {
   ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
 }
 
-class _LibraryScreenState extends ConsumerState<LibraryScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
+class _LibraryScreenState extends ConsumerState<LibraryScreen> {
+  final _searchCtrl = TextEditingController();
+  String _search = '';
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+    final booksAsync = ref.watch(_booksProvider);
 
     return Scaffold(
-      backgroundColor: cs.surfaceContainerLowest,
+      backgroundColor: AppColors.bgPage,
       appBar: AppBar(
-        backgroundColor: cs.surface,
-        surfaceTintColor: Colors.transparent,
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 14,
-              backgroundColor: cs.primaryContainer,
-              child: Icon(Icons.person, size: 16, color: cs.primary),
-            ),
-            const SizedBox(width: 8),
-            Text('EduFlow 智学', style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-          ],
-        ),
+        title: const Text('图书馆'),
         actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: cs.primary,
-          unselectedLabelColor: cs.onSurfaceVariant,
-          indicatorColor: cs.primary,
-          tabs: const [
-            Tab(text: '正在学习'),
-            Tab(text: '已完成'),
-            Tab(text: '收藏'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _LearningTab(cs: cs, tt: tt),
-          _CompletedTab(cs: cs, tt: tt),
-          _FavoritesTab(cs: cs, tt: tt),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: () => ref.invalidate(_booksProvider)),
         ],
       ),
-    );
-  }
-}
-
-// ── 正在学习 Tab ──────────────────────────────────────────────────────────────
-class _LearningTab extends StatelessWidget {
-  final ColorScheme cs;
-  final TextTheme tt;
-  const _LearningTab({required this.cs, required this.tt});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Column(
         children: [
-          // 主推荐书
-          _FeaturedBookCard(cs: cs, tt: tt),
-          const SizedBox(height: 16),
-
-          // 小卡片网格
-          ...(_learningBooks.map((book) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _BookListItem(book: book, cs: cs, tt: tt),
-          ))),
-
-          const SizedBox(height: 16),
-          Text('推荐资料', style: tt.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 130,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _recommendedBooks.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final book = _recommendedBooks[index];
-                return _RecommendedBookCard(title: book, cs: cs, tt: tt);
+          Container(
+            color: AppColors.bgCard,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: TextField(
+              controller: _searchCtrl,
+              decoration: const InputDecoration(
+                hintText: '搜索书名...',
+                prefixIcon: Icon(Icons.search),
+                isDense: true,
+              ),
+              onChanged: (v) => setState(() => _search = v.trim().toLowerCase()),
+            ),
+          ),
+          Expanded(
+            child: booksAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                    const SizedBox(height: 12),
+                    Text(e.toString().replaceAll('Exception: ', ''),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.textSecondary)),
+                    const SizedBox(height: 16),
+                    ElevatedButton(onPressed: () => ref.invalidate(_booksProvider), child: const Text('重新加载')),
+                  ],
+                ),
+              ),
+              data: (result) {
+                final books = _search.isEmpty
+                    ? result.items
+                    : result.items.where((b) => b.title.toLowerCase().contains(_search)).toList();
+                if (books.isEmpty) {
+                  return const Center(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.library_books_outlined, size: 48, color: AppColors.textWeak),
+                      SizedBox(height: 12),
+                      Text('暂无图书', style: TextStyle(color: AppColors.textSecondary)),
+                    ]),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(_booksProvider),
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.7,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: books.length,
+                    itemBuilder: (context, i) => _BookCard(book: books[i]),
+                  ),
+                );
               },
             ),
           ),
@@ -118,267 +106,82 @@ class _LearningTab extends StatelessWidget {
   }
 }
 
-final _learningBooks = [
-  _BookItem('数据结构与算法(Java版)', '计算机科学 · 必修课', 0.45),
-  _BookItem('全球史：从史前到21世纪', '通识教育 · L.S. 斯塔夫里阿诺斯', 0.15),
-  _BookItem('线性代数精讲 (下)', '数学基础 · 正在进行', 0.88),
-];
+class _BookCard extends StatelessWidget {
+  final Book book;
+  const _BookCard({required this.book});
 
-final _recommendedBooks = ['量子力学导引', '现代设计史', '高级口译教程', '人工智能导论'];
-
-class _BookItem {
-  final String title;
-  final String subtitle;
-  final double progress;
-  _BookItem(this.title, this.subtitle, this.progress);
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/books/detail/${book.id}'),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderWeak),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+              child: book.coverUrl != null
+                  ? Image.network(
+                      book.coverUrl!,
+                      height: 140,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _PlaceholderCover(title: book.title),
+                    )
+                  : _PlaceholderCover(title: book.title),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(book.title,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMain),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                    if (book.author != null) ...[
+                      const SizedBox(height: 2),
+                      Text(book.author!,
+                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _FeaturedBookCard extends StatelessWidget {
-  final ColorScheme cs;
-  final TextTheme tt;
-  const _FeaturedBookCard({required this.cs, required this.tt});
+class _PlaceholderCover extends StatelessWidget {
+  final String title;
+  const _PlaceholderCover({required this.title});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 80,
-            height: 110,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [cs.primary, cs.primaryContainer],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.auto_stories, color: cs.onPrimary, size: 32),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDC2626).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text('重点复习',
-                      style: TextStyle(fontSize: 11, color: Color(0xFFDC2626), fontWeight: FontWeight.w500)),
-                ),
-                const SizedBox(height: 6),
-                Text('高级宏观经济学分析',
-                    style: tt.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text('王教授 · 经济学院',
-                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('已学习 72%',
-                        style: tt.bodySmall?.copyWith(color: cs.primary)),
-                    Text('上次于 2小时前',
-                        style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: 0.72,
-                    backgroundColor: cs.primaryContainer,
-                    valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
-                    minHeight: 6,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BookListItem extends StatelessWidget {
-  final _BookItem book;
-  final ColorScheme cs;
-  final TextTheme tt;
-  const _BookListItem({required this.book, required this.cs, required this.tt});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push('/books/detail/1'),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: cs.outlineVariant),
+      height: 140,
+      width: double.infinity,
+      color: AppColors.primary.withAlpha(40),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Text(title,
+              style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w500),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 64,
-              decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Icon(Icons.book, color: cs.primary, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(book.title,
-                      style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text(book.subtitle,
-                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: book.progress,
-                            backgroundColor: cs.primaryContainer,
-                            valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
-                            minHeight: 5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text('${(book.progress * 100).round()}%',
-                          style: tt.bodySmall?.copyWith(color: cs.primary)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              icon: Icon(Icons.more_vert, size: 18, color: cs.onSurfaceVariant),
-              onPressed: () {},
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RecommendedBookCard extends StatelessWidget {
-  final String title;
-  final ColorScheme cs;
-  final TextTheme tt;
-  const _RecommendedBookCard({required this.title, required this.cs, required this.tt});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push('/books/detail/1'),
-      child: Container(
-        width: 90,
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: cs.outlineVariant),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
-                ),
-                child: Center(child: Icon(Icons.auto_stories, color: cs.primary, size: 28)),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(6),
-              child: Text(title,
-                  style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── 已完成 Tab ────────────────────────────────────────────────────────────────
-class _CompletedTab extends StatelessWidget {
-  final ColorScheme cs;
-  final TextTheme tt;
-  const _CompletedTab({required this.cs, required this.tt});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.check_circle_outline, size: 56, color: cs.outlineVariant),
-          const SizedBox(height: 12),
-          Text('暂无已完成的书籍', style: tt.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: () {},
-            child: const Text('浏览书库'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── 收藏 Tab ──────────────────────────────────────────────────────────────────
-class _FavoritesTab extends StatelessWidget {
-  final ColorScheme cs;
-  final TextTheme tt;
-  const _FavoritesTab({required this.cs, required this.tt});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.bookmark_outline, size: 56, color: cs.outlineVariant),
-          const SizedBox(height: 12),
-          Text('还没有收藏任何书籍', style: tt.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () => context.push('/favorites'),
-            icon: const Icon(Icons.star_outline),
-            label: const Text('查看全部收藏'),
-          ),
-        ],
       ),
     );
   }

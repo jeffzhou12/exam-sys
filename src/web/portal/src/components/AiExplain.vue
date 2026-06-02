@@ -128,7 +128,7 @@ defineExpose({ open })
   font-size: 14px;
   line-height: 1.8;
   color: #374151;
-  padding: 4px 0;
+  padding: 20px;
 }
 
 .ai-content :deep(h1),

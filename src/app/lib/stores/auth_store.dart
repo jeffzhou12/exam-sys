@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api.dart';
 import '../api/api_client.dart';
@@ -5,6 +6,7 @@ import '../api/models/auth_models.dart';
 
 class AuthState {
   final String? token;
+  final String? userId;
   final String? username;
   final String? role;
   final String? tenantId;
@@ -13,6 +15,7 @@ class AuthState {
 
   const AuthState({
     this.token,
+    this.userId,
     this.username,
     this.role,
     this.tenantId,
@@ -24,6 +27,7 @@ class AuthState {
 
   AuthState copyWith({
     String? token,
+    String? userId,
     String? username,
     String? role,
     String? tenantId,
@@ -33,6 +37,7 @@ class AuthState {
   }) =>
       AuthState(
         token: clearToken ? null : (token ?? this.token),
+        userId: clearToken ? null : (userId ?? this.userId),
         username: clearToken ? null : (username ?? this.username),
         role: clearToken ? null : (role ?? this.role),
         tenantId: clearToken ? null : (tenantId ?? this.tenantId),
@@ -51,7 +56,22 @@ class AuthStore extends Notifier<AuthState> {
   Future<void> _init() async {
     final token = await readToken();
     if (token != null) {
-      state = state.copyWith(token: token);
+      state = state.copyWith(
+        token: token,
+        userId: _extractUserIdFromJwt(token),
+      );
+    }
+  }
+
+  String? _extractUserIdFromJwt(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final normalized = base64Url.normalize(parts[1]);
+      final payload = jsonDecode(utf8.decode(base64Url.decode(normalized))) as Map<String, dynamic>;
+      return payload['sub'] as String? ?? payload['nameid'] as String?;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -62,6 +82,7 @@ class AuthStore extends Notifier<AuthState> {
       await saveCredentials(token: resp.token, tenantId: resp.tenantId);
       state = state.copyWith(
         token: resp.token,
+        userId: _extractUserIdFromJwt(resp.token),
         username: resp.username,
         role: resp.role,
         tenantId: resp.tenantId,
@@ -86,6 +107,7 @@ class AuthStore extends Notifier<AuthState> {
       await saveCredentials(token: resp.token, tenantId: resp.tenantId);
       state = state.copyWith(
         token: resp.token,
+        userId: _extractUserIdFromJwt(resp.token),
         username: resp.username,
         role: resp.role,
         tenantId: resp.tenantId,

@@ -1,202 +1,116 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../api/api.dart';
+import '../../../api/models/exam_models.dart';
 import '../../../stores/auth_store.dart';
+import '../../../theme/app_theme.dart';
 
-class ExamListScreen extends ConsumerWidget {
+final _examsProvider = FutureProvider<PagedResult<ExamPaper>>((ref) async {
+  return examsApi.getExams(pageSize: 20);
+});
+
+class ExamListScreen extends ConsumerStatefulWidget {
   const ExamListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+  ConsumerState<ExamListScreen> createState() => _ExamListScreenState();
+}
 
-    void requireLogin(VoidCallback action) {
-      if (ref.read(authStoreProvider).isLoggedIn) {
-        action();
-      } else {
-        context.go('/login?redirect=${Uri.encodeComponent('/exams')}');
-      }
-    }
+class _ExamListScreenState extends ConsumerState<ExamListScreen> {
+  int _filterStatus = -1;
+
+  @override
+  Widget build(BuildContext context) {
+    final examsAsync = ref.watch(_examsProvider);
+    final isLoggedIn = ref.watch(authStoreProvider).isLoggedIn;
 
     return Scaffold(
-      backgroundColor: cs.surfaceContainerLowest,
-      body: CustomScrollView(
-        slivers: [
-          // ── AppBar ─────────────────────────────────────────────────
-          SliverAppBar(
-            floating: true,
-            backgroundColor: cs.surface,
-            surfaceTintColor: Colors.transparent,
-            title: Row(
-              children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: cs.primaryContainer,
-                  child: Icon(Icons.person, size: 16, color: cs.primary),
-                ),
-                const SizedBox(width: 8),
-                Text('考试中心',
-                    style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-              ],
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: () => context.go('/messages'),
-              ),
-            ],
+      backgroundColor: AppColors.bgPage,
+      appBar: AppBar(
+        title: const Text('考试中心'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: isLoggedIn ? () => context.go('/messages') : null,
           ),
-
-          // ── 可用考试 ────────────────────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => ref.invalidate(_examsProvider),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            color: AppColors.bgCard,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
                 children: [
-                  Text('可用考试', style: tt.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text('找到符合你学习阶段的考试', style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                  _StatusChip(label: '全部', value: -1, selected: _filterStatus == -1,
+                      onTap: () => setState(() => _filterStatus = -1)),
+                  const SizedBox(width: 8),
+                  _StatusChip(label: '报名中', value: 1, selected: _filterStatus == 1,
+                      onTap: () => setState(() => _filterStatus = 1)),
+                  const SizedBox(width: 8),
+                  _StatusChip(label: '进行中', value: 2, selected: _filterStatus == 2,
+                      onTap: () => setState(() => _filterStatus = 2)),
+                  const SizedBox(width: 8),
+                  _StatusChip(label: '已结束', value: 3, selected: _filterStatus == 3,
+                      onTap: () => setState(() => _filterStatus = 3)),
                 ],
               ),
             ),
           ),
-
-          // ── 重点考试卡片 ────────────────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            sliver: SliverToBoxAdapter(
-              child: _FeaturedExamCard(cs: cs, tt: tt, requireLogin: requireLogin),
-            ),
-          ),
-
-          // ── 进行中考试 ──────────────────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            sliver: SliverToBoxAdapter(
-              child: _ExamCard(
-                icon: Icons.history_edu,
-                badge: '进行中 35%',
-                badgeColor: cs.primary,
-                title: '现代社会学基础',
-                tags: const ['60 分钟', '30 题'],
-                actionLabel: '继续',
-                actionIcon: Icons.play_arrow,
-                onAction: () => requireLogin(() => context.go('/exams/1/room')),
-                onCardTap: () => context.go('/exams/1/detail'),
-                cs: cs,
-                tt: tt,
+          const Divider(height: 1),
+          Expanded(
+            child: examsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => _ErrorWidget(
+                message: e.toString().replaceAll('Exception: ', ''),
+                onRetry: () => ref.invalidate(_examsProvider),
               ),
-            ),
-          ),
-
-          // ── 未开始考试 ──────────────────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            sliver: SliverToBoxAdapter(
-              child: _ExamCard(
-                icon: Icons.calculate,
-                badge: '未开始',
-                badgeColor: cs.onSurfaceVariant,
-                title: '应用线性代数',
-                tags: const ['90 分钟', '25 题'],
-                actionLabel: '开始',
-                actionIcon: Icons.start,
-                onAction: () => requireLogin(() => context.go('/exams/2/detail')),
-                onCardTap: () => context.go('/exams/2/detail'),
-                cs: cs,
-                tt: tt,
-              ),
-            ),
-          ),
-
-          // ── AI 成绩分析 ─────────────────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-            sliver: SliverToBoxAdapter(
-              child: _AiAnalysisCard(cs: cs, tt: tt),
-            ),
-          ),
-
-          const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
-        ],
-      ),
-    );
-  }
-}
-
-// ── 重点/直播考试卡片 ─────────────────────────────────────────────────────────
-class _FeaturedExamCard extends StatelessWidget {
-  final ColorScheme cs;
-  final TextTheme tt;
-  final void Function(VoidCallback) requireLogin;
-  const _FeaturedExamCard({required this.cs, required this.tt, required this.requireLogin});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [cs.primary, cs.primaryContainer],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDC2626),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6, height: 6,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle, color: Colors.white),
+              data: (result) {
+                final items = _filterStatus == -1
+                    ? result.items
+                    : result.items.where((e) => e.status == _filterStatus).toList();
+                if (items.isEmpty) {
+                  return const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.inbox_outlined, size: 48, color: AppColors.textWeak),
+                        SizedBox(height: 16),
+                        Text('暂无考试', style: TextStyle(color: AppColors.textSecondary)),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                    const Text('正在直播',
-                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Icon(Icons.science, color: cs.onPrimary.withOpacity(0.7), size: 20),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text('高等量子力学期末考试',
-              style: tt.titleMedium?.copyWith(color: cs.onPrimary, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              _WhiteTag(label: '120 分钟'),
-              _WhiteTag(label: '45 道题'),
-              _WhiteTag(label: '高级'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () => requireLogin(() => context.go('/exams/1/detail')),
-              style: FilledButton.styleFrom(
-                backgroundColor: cs.onPrimary,
-                foregroundColor: cs.primary,
-              ),
-              icon: const Icon(Icons.arrow_forward, size: 16),
-              label: const Text('进入考场'),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(_examsProvider),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, idx) {
+                      final exam = items[idx];
+                      return _ExamCard(
+                        exam: exam,
+                        onTap: () => context.push('/exams/${exam.id}/detail'),
+                        onEnter: () {
+                          if (!isLoggedIn) {
+                            context.go('/login?redirect=/exams/${exam.id}/detail');
+                            return;
+                          }
+                          context.push('/exams/${exam.id}/detail');
+                        },
+                      );
+                    },
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -205,109 +119,117 @@ class _FeaturedExamCard extends StatelessWidget {
   }
 }
 
-class _WhiteTag extends StatelessWidget {
+class _StatusChip extends StatelessWidget {
   final String label;
-  const _WhiteTag({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
-    );
-  }
-}
-
-// ── 普通考试卡片 ──────────────────────────────────────────────────────────────
-class _ExamCard extends StatelessWidget {
-  final IconData icon;
-  final String badge;
-  final Color badgeColor;
-  final String title;
-  final List<String> tags;
-  final String actionLabel;
-  final IconData actionIcon;
-  final VoidCallback onAction;
-  final VoidCallback onCardTap;
-  final ColorScheme cs;
-  final TextTheme tt;
-
-  const _ExamCard({
-    required this.icon,
-    required this.badge,
-    required this.badgeColor,
-    required this.title,
-    required this.tags,
-    required this.actionLabel,
-    required this.actionIcon,
-    required this.onAction,
-    required this.onCardTap,
-    required this.cs,
-    required this.tt,
-  });
+  final int value;
+  final bool selected;
+  final VoidCallback onTap;
+  const _StatusChip({required this.label, required this.value, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onCardTap,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.bgPage,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: selected ? AppColors.primary : AppColors.borderStrong),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExamCard extends StatelessWidget {
+  final ExamPaper exam;
+  final VoidCallback onTap;
+  final VoidCallback onEnter;
+  const _ExamCard({required this.exam, required this.onTap, required this.onEnter});
+
+  Color get _statusColor => switch (exam.status) {
+        1 => AppColors.info,
+        2 => AppColors.success,
+        3 => AppColors.textWeak,
+        4 => AppColors.error,
+        _ => AppColors.textWeak,
+      };
+
+  bool get _canEnter => exam.status == 1 || exam.status == 2;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: cs.surface,
+          color: AppColors.bgCard,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: cs.outlineVariant),
+          border: Border.all(color: AppColors.borderWeak),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: cs.primary, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(badge,
-                      style: TextStyle(fontSize: 12, color: badgeColor, fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 2),
-                  Text(title,
-                      style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    children: tags.map((t) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: cs.primaryContainer,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(t, style: TextStyle(fontSize: 11, color: cs.primary)),
-                    )).toList(),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _statusColor.withAlpha(26),
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                ],
-              ),
+                  child: Text(exam.statusLabel,
+                      style: TextStyle(color: _statusColor, fontSize: 12, fontWeight: FontWeight.w500)),
+                ),
+                const Spacer(),
+                Text('${exam.totalScore} 分',
+                    style: const TextStyle(color: AppColors.textWeak, fontSize: 12)),
+              ],
             ),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: onAction,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                textStyle: const TextStyle(fontSize: 13),
-              ),
-              icon: Icon(actionIcon, size: 16),
-              label: Text(actionLabel),
+            const SizedBox(height: 10),
+            Text(exam.title,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textMain),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis),
+            if (exam.description != null && exam.description!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(exam.description!,
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 16,
+              children: [
+                _InfoTag(icon: Icons.timer_outlined, label: '${exam.durationMinutes} 分钟'),
+                _InfoTag(icon: Icons.quiz_outlined, label: '${exam.questionCount} 题'),
+                if (exam.startTime != null)
+                  _InfoTag(icon: Icons.calendar_today_outlined,
+                      label: '${exam.startTime!.month}/${exam.startTime!.day}'),
+              ],
             ),
+            if (_canEnter) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: onEnter,
+                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 10)),
+                  child: Text(exam.status == 2 ? '进入考场' : '查看详情'),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -315,99 +237,45 @@ class _ExamCard extends StatelessWidget {
   }
 }
 
-// ── AI 成绩分析面板 ───────────────────────────────────────────────────────────
-class _AiAnalysisCard extends StatelessWidget {
-  final ColorScheme cs;
-  final TextTheme tt;
-  const _AiAnalysisCard({required this.cs, required this.tt});
+class _InfoTag extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _InfoTag({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.auto_awesome, size: 18, color: cs.primary),
-              const SizedBox(width: 6),
-              Text('AI 成绩分析',
-                  style: tt.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // 三列统计
-          Row(
-            children: [
-              _AnalyticItem(label: '平均分', value: '84%',
-                  sub: '↑+12%', subColor: const Color(0xFF16A34A), cs: cs, tt: tt),
-              Container(width: 1, height: 50, color: cs.outlineVariant),
-              _AnalyticItem(label: '全球排名', value: '#142',
-                  sub: '前 5%', subColor: cs.primary, cs: cs, tt: tt),
-              Container(width: 1, height: 50, color: cs.outlineVariant),
-              _AnalyticItem(label: '准确率', value: '92%',
-                  sub: '上升趋势', subColor: const Color(0xFF16A34A), cs: cs, tt: tt),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Divider(color: cs.outlineVariant),
-          const SizedBox(height: 8),
-
-          // 薄弱环节
-          Row(
-            children: [
-              Icon(Icons.lightbulb_outline, size: 16, color: cs.primary),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text('智能建议：您的准确率在45分钟后显著下降，建议提升答题效率。',
-                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => context.go('/ai-analysis'),
-              icon: const Icon(Icons.insights, size: 16),
-              label: const Text('查看完整分析'),
-            ),
-          ),
-        ],
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: AppColors.textWeak),
+        const SizedBox(width: 3),
+        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+      ],
     );
   }
 }
 
-class _AnalyticItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final String sub;
-  final Color subColor;
-  final ColorScheme cs;
-  final TextTheme tt;
-  const _AnalyticItem({
-    required this.label, required this.value,
-    required this.sub, required this.subColor,
-    required this.cs, required this.tt,
-  });
+class _ErrorWidget extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ErrorWidget({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(value, style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-          Text(label, style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-          Text(sub, style: TextStyle(fontSize: 11, color: subColor, fontWeight: FontWeight.w500)),
-        ],
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+            const SizedBox(height: 16),
+            Text(message, textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary)),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: onRetry, child: const Text('重新加载')),
+          ],
+        ),
       ),
     );
   }

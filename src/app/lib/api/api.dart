@@ -1,4 +1,4 @@
-import 'api_client.dart';
+﻿import 'api_client.dart';
 import 'models/auth_models.dart';
 import 'models/exam_models.dart';
 import 'models/question_models.dart';
@@ -8,7 +8,7 @@ import 'models/profile_models.dart';
 
 final _dio = createDio();
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// 鈹€鈹€ Auth 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 class AuthApi {
   Future<LoginResponse> login(String identifier, String password) async {
     final res = await _dio.post<Map<String, dynamic>>('/auth/login', data: {
@@ -82,77 +82,169 @@ class AuthApi {
   }
 }
 
-// ── Exams ─────────────────────────────────────────────────────────────────────
+// 鈹€鈹€ Exams 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 class ExamsApi {
-  Future<List<ExamPaper>> getMyExams() async {
-    final res = await _dio.get<List<dynamic>>('/exampapers/my');
-    return res.data!.map((e) => ExamPaper.fromJson(e as Map<String, dynamic>)).toList();
+  Future<PagedResult<ExamPaper>> getExams({
+    int page = 1,
+    int pageSize = 10,
+    int? status,
+  }) async {
+    final res = await _dio.get<Map<String, dynamic>>('/exam-papers', queryParameters: {
+      'page': page,
+      'pageSize': pageSize,
+      if (status != null) 'status': status,
+    });
+    return PagedResult.fromJson(res.data!, ExamPaper.fromJson);
   }
 
-  Future<ExamPaper> getExam(String id) async {
-    final res = await _dio.get<Map<String, dynamic>>('/exampapers/$id');
-    return ExamPaper.fromJson(res.data!);
+  Future<ExamPaperDetail> getExamDetail(String id) async {
+    final res = await _dio.get<Map<String, dynamic>>('/exam-papers/$id');
+    return ExamPaperDetail.fromJson(res.data!);
   }
 
-  Future<void> submitAnswers(String examId, List<StudentAnswer> answers) async {
-    await _dio.post('/studentanswers', data: {
-      'examPaperId': examId,
+  Future<void> submitAnswers({
+    required String examId,
+    required String studentId,
+    required List<ExamAnswerItem> answers,
+  }) async {
+    await _dio.post('/exam-papers/$examId/answers', data: {
+      'studentId': studentId,
       'answers': answers.map((a) => a.toJson()).toList(),
     });
   }
+
+  Future<List<StudentExamSummary>> getMyResults() async {
+    final res = await _dio.get<List<dynamic>>('/student/my-results');
+    return (res.data ?? [])
+        .map((e) => StudentExamSummary.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 }
 
-// ── Questions ─────────────────────────────────────────────────────────────────
+// 鈹€鈹€ Practice 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+class PracticeApi {
+  Future<List<PracticeQuestion>> getQuestions({
+    int count = 10,
+    int? type,
+    int? difficulty,
+    String? knowledgePoint,
+  }) async {
+    final res = await _dio.get<List<dynamic>>('/practice/questions', queryParameters: {
+      'count': count,
+      if (type != null) 'type': type,
+      if (difficulty != null) 'difficulty': difficulty,
+      if (knowledgePoint != null) 'knowledgePoint': knowledgePoint,
+    });
+    return (res.data ?? [])
+        .map((e) => PracticeQuestion.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<PracticeResult> submitAnswers(List<Map<String, String>> answers) async {
+    final res = await _dio.post<Map<String, dynamic>>('/practice/submit', data: {
+      'answers': answers,
+    });
+    return PracticeResult.fromJson(res.data!);
+  }
+
+  Future<List<PracticeSession>> getHistory() async {
+    final res = await _dio.get<List<dynamic>>('/practice/sessions');
+    return (res.data ?? [])
+        .map((e) => PracticeSession.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> saveSession({
+    required int count,
+    required int correctCount,
+    required int totalScore,
+    required int maxScore,
+    String? typeName,
+    String? knowledgePoint,
+    int? questionType,
+    int? difficulty,
+    required int setupCount,
+  }) async {
+    await _dio.post('/practice/sessions', data: {
+      'count': count,
+      'correctCount': correctCount,
+      'totalScore': totalScore,
+      'maxScore': maxScore,
+      if (typeName != null) 'typeName': typeName,
+      if (knowledgePoint != null) 'knowledgePoint': knowledgePoint,
+      if (questionType != null) 'questionType': questionType,
+      if (difficulty != null) 'difficulty': difficulty,
+      'setupCount': setupCount,
+    });
+  }
+
+  Future<String> explainQuestion(String questionId) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+        '/practice/questions/$questionId/explain');
+    return res.data?['explanation'] as String? ?? '';
+  }
+}
+
+// 鈹€鈹€ Questions 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 class QuestionsApi {
-  Future<List<Question>> getPracticeQuestions({
-    String? subject,
+  Future<PagedResult<Question>> getQuestions({
     int page = 1,
     int pageSize = 20,
   }) async {
     final res = await _dio.get<Map<String, dynamic>>('/questions', queryParameters: {
-      if (subject != null) 'subject': subject,
       'page': page,
       'pageSize': pageSize,
     });
-    return (res.data!['items'] as List)
-        .map((e) => Question.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return PagedResult.fromJson(res.data!, Question.fromJson);
   }
 }
 
-// ── Messages ───────────────────────────────────────────────────────────────────
+// 鈹€鈹€ Messages 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 class MessagesApi {
-  Future<List<Message>> getMessages({int page = 1, int pageSize = 20}) async {
-    final res = await _dio.get<Map<String, dynamic>>('/messages', queryParameters: {
+  Future<PagedResult<Message>> getInbox({int page = 1, int pageSize = 20}) async {
+    final res = await _dio.get<Map<String, dynamic>>('/messages/inbox', queryParameters: {
       'page': page,
       'pageSize': pageSize,
     });
-    return (res.data!['items'] as List)
-        .map((e) => Message.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return PagedResult.fromJson(res.data!, Message.fromJson);
   }
 
-  Future<int> getUnreadCount() async {
-    final res = await _dio.get<Map<String, dynamic>>('/messages/unread-count');
-    return res.data!['count'] as int;
+  Future<PagedResult<Message>> getSent({int page = 1, int pageSize = 20}) async {
+    final res = await _dio.get<Map<String, dynamic>>('/messages/sent', queryParameters: {
+      'page': page,
+      'pageSize': pageSize,
+    });
+    return PagedResult.fromJson(res.data!, Message.fromJson);
   }
 
-  Future<void> markAsRead(int messageId) async {
-    await _dio.post('/messages/$messageId/read');
+  Future<void> markAsRead(String messageId) async {
+    await _dio.patch('/messages/$messageId/read');
+  }
+
+  Future<void> sendMessage({
+    required String recipientId,
+    required String subject,
+    required String body,
+    String? questionContent,
+  }) async {
+    await _dio.post('/messages', data: {
+      'recipientId': recipientId,
+      'subject': subject,
+      'body': body,
+      if (questionContent != null) 'questionContent': questionContent,
+    });
   }
 }
 
-// ── Books ────────────────────────────────────────────────────────────────────
+// 鈹€鈹€ Books 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 class BooksApi {
-  Future<List<Book>> getBooks({String? category, int page = 1, int pageSize = 20}) async {
+  Future<PagedResult<Book>> getBooks({String? category, int page = 1, int pageSize = 20}) async {
     final res = await _dio.get<Map<String, dynamic>>('/books', queryParameters: {
       if (category != null) 'category': category,
       'page': page,
       'pageSize': pageSize,
     });
-    return (res.data!['items'] as List)
-        .map((e) => Book.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return PagedResult.fromJson(res.data!, Book.fromJson);
   }
 
   Future<Book> getBook(String id) async {
@@ -161,7 +253,7 @@ class BooksApi {
   }
 }
 
-// ── Favorites ─────────────────────────────────────────────────────────────────
+// 鈹€鈹€ Favorites 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 class FavoritesApi {
   Future<bool> toggle(int targetType, String targetId) async {
     final res = await _dio.post<Map<String, dynamic>>('/favorites/toggle', data: {
@@ -185,46 +277,11 @@ class FavoritesApi {
       'page': page,
       'pageSize': pageSize,
     });
-    final data = res.data!;
-    return PagedResult(
-      items: (data['items'] as List)
-          .map((e) => FavoriteItem.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      total: data['total'] as int,
-      page: data['page'] as int,
-      pageSize: data['pageSize'] as int,
-    );
+    return PagedResult.fromJson(res.data!, FavoriteItem.fromJson);
   }
 }
 
-// ── WrongBook ─────────────────────────────────────────────────────────────────
-class WrongBookApi {
-  Future<List<WrongQuestion>> getWrongQuestions({String? subject}) async {
-    final res = await _dio.get<Map<String, dynamic>>('/wrongbook', queryParameters: {
-      if (subject != null) 'subject': subject,
-    });
-    return (res.data!['items'] as List)
-        .map((e) => WrongQuestion.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  Future<int> getCount() async {
-    final res = await _dio.get<Map<String, dynamic>>('/wrongbook/count');
-    return res.data!['count'] as int;
-  }
-}
-
-// ── Singletons ────────────────────────────────────────────────────────────────
-final authApi = AuthApi();
-final examsApi = ExamsApi();
-final questionsApi = QuestionsApi();
-final messagesApi = MessagesApi();
-final booksApi = BooksApi();
-final favoritesApi = FavoritesApi();
-final wrongBookApi = WrongBookApi();
-final profileApi = ProfileApi();
-
-// ── Profile ───────────────────────────────────────────────────────────────────
+// 鈹€鈹€ Profile 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 class ProfileApi {
   Future<UserProfile> getProfile() async {
     final res = await _dio.get<Map<String, dynamic>>('/profile');
@@ -247,3 +304,13 @@ class ProfileApi {
     });
   }
 }
+
+// 鈹€鈹€ Singletons 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+final authApi = AuthApi();
+final examsApi = ExamsApi();
+final practiceApi = PracticeApi();
+final questionsApi = QuestionsApi();
+final messagesApi = MessagesApi();
+final booksApi = BooksApi();
+final favoritesApi = FavoritesApi();
+final profileApi = ProfileApi();
